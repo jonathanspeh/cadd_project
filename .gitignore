@@ -47,3 +47,13 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Data
+data/
+
+# Dowload Script
+code/download_raw.sh
+
+# Quarto stuff
+/.quarto/
+/quarto_output
