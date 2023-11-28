@@ -1,0 +1,204 @@
+---
+title: "Clinvar Scoring"
+author: "Jonathan Speh"
+format: html
+engine: knitr
+---
+
+## Dependencies
+
+```{r}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+```
+
+## Description
+
+-   Retrieve CADD scores and used annotations for all Clinvar SNVs that are annotated as pathogenic
+-   ClinVar Data were retrived on 21.11.2023, version is 12.11.2023
+
+## Prepare Data
+
+-   already done by Martin
+
+```{bash}
+#| eval: false
+
+# download data
+wget https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar_20231112.vcf.gz -P data/
+
+#filter pathogenic SNVs from Clinvar data and remove duplicates
+zcat data/clinvar_20231112.vcf.gz | grep  ";CLNSIG=Pathogenic;" | awk 'BEGIN{ FS="\t"; OFS="\t" }{ if ((length($4) == 1) && (length($5) == 1)) print $1,$2,".",$4,$5 }' | sort -k1,1 -k2,2n | uniq | gzip -c > data/clinvar_20231112.pathogenic_SNVs.vcf.gz
+```
+
+Number of entries:
+
+```{bash}
+#| eval: false
+zcat data/clinvar_20231112.pathogenic_SNVs.vcf.gz | wc -l
+```
+
+
+```{r}
+n_input <- read.table("data/clinvar_20231112.pathogenic_SNVs.vcf.gz") |> nrow()
+```
+
+
+
+## Scoring
+
+-   Upload to CADD
+    -   Used GRCh38, v1.6, include annotations
+    -   Read 67438 lines, saved 67420 variants - TODO: Why a mismatch?
+    -   Check if there are some more duplicates
+
+```{bash}
+#| message: false
+#| eval: false
+wget https://cadd.kircherlab.bihealth.org/static/finished/GRCh38-v1.6_anno_07f30736e553caf29fd517ca559d7f8c.tsv.gz -O data/clinvar_pathogenic_scored.tsv.gz
+gunzip data/clinvar_pathogenic_scored.tsv.gz
+
+```
+
+## Check and select scored data
+
+```{r}
+keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
+         "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
+         "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
+         "relcDNApos", "protPos", "relProtPos", "RawScore", "PHRED")
+
+clinvar_scored <- fread("data/clinvar_pathogenic_scored.tsv", 
+                        header = TRUE, sep = "\t", skip = 1) |> 
+                  select(all_of(keep)) |> 
+                #  filter(Chrom != c("X", "Y")) |> #TODO: Decide if XY should be used
+                  mutate("ChromPos" = paste(Chrom, Pos, sep=":"), # identifier for each position
+                         "Ident" = paste(ChromPos, Ref, Alt, sep = ":")) # identifier for each variant
+
+
+
+
+
+
+# Get number of hits and unique positions
+# TODO: Unique position makes no sense, change to uniqe variants - i.w. Unique ChromPos and Alt
+n_hits <- nrow(clinvar_scored)
+n_unique_variants <- length(unique(clinvar_scored$Ident)) 
+
+# Filter coding Variants
+coding <- clinvar_scored |> filter(AnnoType == "CodingTranscript")
+n_coding <- nrow(coding)
+n_unique_coding <- length(unique(coding$Ident))
+
+
+
+
+
+```
+
+CADD scoring returned `r n_hits` results for `r n_unique_variants` unique Variants. That means that `r n_input - n_unique_variants` of the input Variants were not scored by CADD. 
+
+
+A total of `r n_coding` hits were annotated to be in coding regions which corresponds to `r n_unique_coding` variants. 
+
+
+
+# Figuring out duplicated Annotations
+
+* Question - How to handle the variants with > 1 annotations 
+  * CADD returns highest score for each variant
+  * How to find annotation that actually lead to indicated PHRED
+  * Try later: Prioritize coding transcript for each variant? 
+     * Check if filtered only coding variants == unique ChromPos + Alt
+  
+## Looking at the multiple 
+
+```{r}
+#| tbl-cap: Positions with the most annotated Variants
+#| fig-cap: Distribution of the number of Annotation for individual Variants
+
+# Show that for each Variant there is only one PHRED
+# by_phred <- clinvar_scored |> group_by(Ident, PHRED) |> count()
+# nrow(by_phred) == length(unique(by_phred$Ident))
+
+# Get possible Annnotations and Consequences --> might help selecting the right variant
+# TODO: decide if I'm going to do something with
+all_annots <- factor(unique(clinvar_scored$AnnoType), 
+                     levels = c("CodingTranscript", "NonCodingTranscript", 
+                                "Transcript", "RegulatoryFeature", "Intergenic"))
+all_consequences <- unique(clinvar_scored$Consequence)
+
+# Find positions with multiple annotations
+# TODO Think if I need to do somehting with them
+multiple_annots <- clinvar_scored |> group_by(Ident) |> count() |> arrange(desc(n)) 
+kable(head(multiple_annots))
+
+
+summary(multiple_annots)
+
+multiple_annots |> 
+  ggplot(aes(x=n))+
+  geom_bar() +
+  scale_y_log10()
+
+```
+
+
+
+## Filter out duplicates
+
+* So far without any consideration of the annotations
+
+```{r}
+clinvar_scored_unique <- clinvar_scored |> group_by(Ident) |> slice_max(PHRED, with_ties = FALSE) |> arrange(Chrom, Pos)
+nrow(clinvar_scored_unique) == n_unique_variants
+
+
+summary(clinvar_scored_unique)
+
+
+```
+
+```{r}
+#| tab-cap: "Show how the Variants are annotated"
+#| fig-cap: 
+#|   -  "Distribution of Phred Scores for different Annotations"
+#|   -  "Distributiob of Phred Scores for different consequences"
+#|   -  "Rawscore for different annotations"
+
+
+
+# Show how the Variants are annotated
+# FIXME Currently somewhat meaningless because of selection issues 
+clinvar_scored_unique |> 
+  group_by(AnnoType, Consequence) |>
+  count() |> arrange(AnnoType, desc(n)) |> kable()
+
+
+# Distribution of Phred Scores for different Annotations
+# FIXME: same issue as before
+# TODO: add descriptive stats (at least n)
+clinvar_scored_unique |>
+  ggplot(aes(x = PHRED)) +
+  geom_histogram(binwidth = 1) +
+  facet_wrap(~AnnoType, scales= "free_y")
+
+# Distributiob of Phred Scores for different consequences
+# TODO: fix x-axis lable 
+clinvar_scored_unique |>
+  # filter(AnnoType == "CodingTranscript") |>
+  ggplot(aes(x = Consequence, y = PHRED)) +
+  geom_violin() +
+  facet_wrap(~AnnoType, scales = "free_x")
+  
+
+# Rawscore for different annotations
+
+clinvar_scored_unique |>
+  ggplot(aes(x = AnnoType, y = RawScore)) +
+  geom_violin() 
+
+```
+
