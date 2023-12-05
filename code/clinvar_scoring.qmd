@@ -3,14 +3,18 @@ title: "Clinvar Scoring"
 author: "Jonathan Speh"
 format: html
 engine: knitr
+bibliography: references.bib
 ---
 
 ## Dependencies
 
 ```{r}
+#| message: false
+
 library(data.table)
 library(dplyr)
 library(ggplot2)
+library(ggridges)
 library(knitr)
 ```
 
@@ -18,6 +22,9 @@ library(knitr)
 
 -   Retrieve CADD scores and used annotations for all Clinvar SNVs that are annotated as pathogenic
 -   ClinVar Data were retrived on 21.11.2023, version is 12.11.2023
+-   Currently trying to figure what to do with duplicates
+
+# Prepare and score Data
 
 ## Prepare Data
 
@@ -40,12 +47,11 @@ Number of entries:
 zcat data/clinvar_20231112.pathogenic_SNVs.vcf.gz | wc -l
 ```
 
-
 ```{r}
 n_input <- read.table("data/clinvar_20231112.pathogenic_SNVs.vcf.gz") |> nrow()
 ```
 
-
+A total of `r n_input` variants will be scored.
 
 ## Scoring
 
@@ -57,6 +63,8 @@ n_input <- read.table("data/clinvar_20231112.pathogenic_SNVs.vcf.gz") |> nrow()
 ```{bash}
 #| message: false
 #| eval: false
+
+# Download CADD results
 wget https://cadd.kircherlab.bihealth.org/static/finished/GRCh38-v1.6_anno_07f30736e553caf29fd517ca559d7f8c.tsv.gz -O data/clinvar_pathogenic_scored.tsv.gz
 gunzip data/clinvar_pathogenic_scored.tsv.gz
 
@@ -65,6 +73,7 @@ gunzip data/clinvar_pathogenic_scored.tsv.gz
 ## Check and select scored data
 
 ```{r}
+#| tbl-cap: CADD results for Clinvar Pathogenic Variants
 keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
          "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
          "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
@@ -73,17 +82,14 @@ keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
 clinvar_scored <- fread("data/clinvar_pathogenic_scored.tsv", 
                         header = TRUE, sep = "\t", skip = 1) |> 
                   select(all_of(keep)) |> 
-                #  filter(Chrom != c("X", "Y")) |> #TODO: Decide if XY should be used
+                  filter(!Chrom %in% c("X", "Y")) |>  
                   mutate("ChromPos" = paste(Chrom, Pos, sep=":"), # identifier for each position
                          "Ident" = paste(ChromPos, Ref, Alt, sep = ":")) # identifier for each variant
 
 
 
 
-
-
-# Get number of hits and unique positions
-# TODO: Unique position makes no sense, change to uniqe variants - i.w. Unique ChromPos and Alt
+# Get number of hits and unique variants
 n_hits <- nrow(clinvar_scored)
 n_unique_variants <- length(unique(clinvar_scored$Ident)) 
 
@@ -92,28 +98,21 @@ coding <- clinvar_scored |> filter(AnnoType == "CodingTranscript")
 n_coding <- nrow(coding)
 n_unique_coding <- length(unique(coding$Ident))
 
-
-
-
-
+kable(head(clinvar_scored))
 ```
 
-CADD scoring returned `r n_hits` results for `r n_unique_variants` unique Variants. That means that `r n_input - n_unique_variants` of the input Variants were not scored by CADD. 
+CADD scoring returned `r n_hits` results for `r n_unique_variants` unique Variants. `r n_input - n_unique_variants` of the input Variants were not scored by CADD.
 
+A total of `r n_coding` hits were annotated to be in coding regions which corresponds to `r n_unique_coding` variants.
 
-A total of `r n_coding` hits were annotated to be in coding regions which corresponds to `r n_unique_coding` variants. 
+# duplicated Annotations
 
+-   Question - How to handle the variants with \> 1 annotations
+    -   CADD returns highest score for each variant
+    -   How to find annotation that actually lead to indicated PHRED
+    -   Try later: Prioritize coding transcript for each variant?
 
-
-# Figuring out duplicated Annotations
-
-* Question - How to handle the variants with > 1 annotations 
-  * CADD returns highest score for each variant
-  * How to find annotation that actually lead to indicated PHRED
-  * Try later: Prioritize coding transcript for each variant? 
-     * Check if filtered only coding variants == unique ChromPos + Alt
-  
-## Looking at the multiple 
+## Looking at the duplicates
 
 ```{r}
 #| tbl-cap: Positions with the most annotated Variants
@@ -131,7 +130,7 @@ all_annots <- factor(unique(clinvar_scored$AnnoType),
 all_consequences <- unique(clinvar_scored$Consequence)
 
 # Find positions with multiple annotations
-# TODO Think if I need to do somehting with them
+# TODO Think if I need to do something with them
 multiple_annots <- clinvar_scored |> group_by(Ident) |> count() |> arrange(desc(n)) 
 kable(head(multiple_annots))
 
@@ -145,60 +144,94 @@ multiple_annots |>
 
 ```
 
+## Remove duplicates
 
-
-## Filter out duplicates
-
-* So far without any consideration of the annotations
+-   So far without any consideration of annotations
 
 ```{r}
 clinvar_scored_unique <- clinvar_scored |> group_by(Ident) |> slice_max(PHRED, with_ties = FALSE) |> arrange(Chrom, Pos)
 nrow(clinvar_scored_unique) == n_unique_variants
+```
+
+# Descriptives for the Phred Score of different annotation/ Consequences
+
+-   **TODO** Everything here is most likely meaningless because of the way the duplicates are removed
+
+```{r}
+#| message: false
+#| tbl-cap: "Description of the PHRED scores"
+#| tbl-subcap: 
+#|   - "For all Consequences"
+#|   - "Consequences with less than 10 variants"
+#| layout-ncol: 1
 
 
-summary(clinvar_scored_unique)
+clinvar_scored_unique_summary <- clinvar_scored_unique |>  
+  group_by(AnnoType, Consequence) |> 
+  summarise(n = n(),
+            meanPhred = mean(PHRED),
+            sdPhred = sd(PHRED),
+            medianPhred = median(PHRED), 
+            minPhred = min(PHRED),
+            maxPhred = max(PHRED)) |>
+  arrange(AnnoType, desc(n))
 
+kable(clinvar_scored_unique_summary)
 
+clinvar_scored_unique_summary |> filter(n<10) |> kable()
+rm(clinvar_scored_unique_summary)
 ```
 
 ```{r}
-#| tab-cap: "Show how the Variants are annotated"
 #| fig-cap: 
-#|   -  "Distribution of Phred Scores for different Annotations"
-#|   -  "Distributiob of Phred Scores for different consequences"
-#|   -  "Rawscore for different annotations"
+#|   -  " Distribution of the Phred Scores"
+#|   -  "Distribution of Phred Scores for different Annotation Types"
+#|   -  "Distribution of Phred Scores for different consequences"
 
 
-
-# Show how the Variants are annotated
-# FIXME Currently somewhat meaningless because of selection issues 
-clinvar_scored_unique |> 
-  group_by(AnnoType, Consequence) |>
-  count() |> arrange(AnnoType, desc(n)) |> kable()
-
+clinvar_scored_unique |>
+  ggplot(aes(x = PHRED)) + 
+  geom_density(colour = "blue") 
 
 # Distribution of Phred Scores for different Annotations
-# FIXME: same issue as before
 # TODO: add descriptive stats (at least n)
 clinvar_scored_unique |>
   ggplot(aes(x = PHRED)) +
   geom_histogram(binwidth = 1) +
   facet_wrap(~AnnoType, scales= "free_y")
 
-# Distributiob of Phred Scores for different consequences
-# TODO: fix x-axis lable 
-clinvar_scored_unique |>
-  # filter(AnnoType == "CodingTranscript") |>
-  ggplot(aes(x = Consequence, y = PHRED)) +
-  geom_violin() +
-  facet_wrap(~AnnoType, scales = "free_x")
   
-
-# Rawscore for different annotations
-
-clinvar_scored_unique |>
-  ggplot(aes(x = AnnoType, y = RawScore)) +
-  geom_violin() 
-
+# Ridgeline Plot of distributions for all Consequences, wrapped by Annotations 
+# So far my favourite 
+clinvar_scored_unique |> 
+  ggplot(aes(x = PHRED, y = Consequence)) +
+  geom_density_ridges() +
+  #stat_density_ridges(quantile_lines = TRUE, quantiles = 4) +
+  theme_ridges() + 
+  facet_wrap(~AnnoType, scales = "free_y", ncol = 2) +
+  theme(legend.position = "none")
 ```
 
+## Pathogenic variants with low PHRED
+
+-   Some known pathogenic Variants (marked in ClinVar as Pathogenic) have fairly low cadd scores
+
+    -   A fixed Threshold (e.g. 15 used in [@reid2023]) will miss candidates
+
+
+
+    ```{r}
+    clinvar_scored_unique |> filter(PHRED <= 15) |> nrow()
+    clinvar_scored_unique |> filter(PHRED <= 10) |> nrow()
+    clinvar_scored_unique |> filter(PHRED <= 1) |> nrow()
+
+    ```
+
+```{r}
+#| message: false
+clinvar_scored_unique |> group_by(Ref, Alt) |> summarise(n = n(), mean_phred = mean(PHRED)) |> arrange(desc(n))
+
+
+clinvar_scored_unique |> filter(AnnoType == "CodingTranscript") |> group_by(Ref, Alt) |> summarise(n = n(), mean_phred = mean(PHRED)) |> arrange(desc(n))
+
+```

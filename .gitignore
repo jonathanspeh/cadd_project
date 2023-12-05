@@ -57,3 +57,4 @@ code/download_raw.sh
 # Quarto stuff
 /.quarto/
 /quarto_output
+code/references.bib
