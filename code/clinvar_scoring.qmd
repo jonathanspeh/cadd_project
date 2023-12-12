@@ -18,6 +18,17 @@ library(ggridges)
 library(knitr)
 ```
 
+## Custom functions
+```{r}
+# Remove duplicates based on Consequence Score and smallest relativ Position in gene  
+remove_duplicates <- function(cadd, id = Ident, pos = relcDNApos) {
+  cadd |> dplyr::group_by({{ id }}) |>
+    dplyr::slice_max(ConsScore, with_ties = TRUE) |>
+    dplyr::slice_min({{ pos }}, with_ties = TRUE) |>
+    dplyr::arrange(Chrom, Pos)
+  }
+```
+
 ## Description
 
 -   Retrieve CADD scores and used annotations for all Clinvar SNVs that are annotated as pathogenic
@@ -57,8 +68,8 @@ A total of `r n_input` variants will be scored.
 
 -   Upload to CADD
     -   Used GRCh38, v1.6, include annotations
-    -   Read 67438 lines, saved 67420 variants - TODO: Why a mismatch?
-    -   Check if there are some more duplicates
+    -   Read 67438 lines, saved 67320 variants 
+
 
 ```{bash}
 #| message: false
@@ -73,6 +84,7 @@ gunzip data/clinvar_pathogenic_scored.tsv.gz
 ## Check and select scored data
 
 ```{r}
+#| message: false
 #| tbl-cap: CADD results for Clinvar Pathogenic Variants
 keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
          "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
@@ -85,9 +97,6 @@ clinvar_scored <- fread("data/clinvar_pathogenic_scored.tsv",
                   filter(!Chrom %in% c("X", "Y")) |>  
                   mutate("ChromPos" = paste(Chrom, Pos, sep=":"), # identifier for each position
                          "Ident" = paste(ChromPos, Ref, Alt, sep = ":")) # identifier for each variant
-
-
-
 
 # Get number of hits and unique variants
 n_hits <- nrow(clinvar_scored)
@@ -103,14 +112,12 @@ kable(head(clinvar_scored))
 
 CADD scoring returned `r n_hits` results for `r n_unique_variants` unique Variants. `r n_input - n_unique_variants` of the input Variants were not scored by CADD.
 
-A total of `r n_coding` hits were annotated to be in coding regions which corresponds to `r n_unique_coding` variants.
+-   Reasons for Missmatch 
+  -   100 mtDNA variants -- Not supported by CADD
+  -   18 Variants with error in ref or alt. allele
+
 
 # duplicated Annotations
-
--   Question - How to handle the variants with \> 1 annotations
-    -   CADD returns highest score for each variant
-    -   How to find annotation that actually lead to indicated PHRED
-    -   Try later: Prioritize coding transcript for each variant?
 
 ## Looking at the duplicates
 
@@ -118,12 +125,9 @@ A total of `r n_coding` hits were annotated to be in coding regions which corres
 #| tbl-cap: Positions with the most annotated Variants
 #| fig-cap: Distribution of the number of Annotation for individual Variants
 
-# Show that for each Variant there is only one PHRED
-# by_phred <- clinvar_scored |> group_by(Ident, PHRED) |> count()
-# nrow(by_phred) == length(unique(by_phred$Ident))
 
-# Get possible Annnotations and Consequences --> might help selecting the right variant
-# TODO: decide if I'm going to do something with
+# Get possible Annnotations and Consequences
+# TODO: Check if needed in final doc
 all_annots <- factor(unique(clinvar_scored$AnnoType), 
                      levels = c("CodingTranscript", "NonCodingTranscript", 
                                 "Transcript", "RegulatoryFeature", "Intergenic"))
@@ -145,17 +149,93 @@ multiple_annots |>
 ```
 
 ## Remove duplicates
-
--   So far without any consideration of annotations
+-   Individual variants have  \> 1 annotations 
+-   CADD only returns the highest score for each Variant and no information on where it came from
+-   Workaround: 
+  -   Use [ConsScore](https://github.com/kircherlab/CADD-scripts/blob/master/src/scripts/lib/Annotations.py#L175) 
+  -   Use relative cDNA positionRemaining Duplicates (e.g. variant annotated in two genes) to prioritize variants earlier in coding sequence
+ 
 
 ```{r}
-clinvar_scored_unique <- clinvar_scored |> group_by(Ident) |> slice_max(PHRED, with_ties = FALSE) |> arrange(Chrom, Pos)
-nrow(clinvar_scored_unique) == n_unique_variants
+#| tbl-cap: "Overview of remaining duplicates using ConScore and rel. cDNA position"
+#| tbl-subcap:
+#|  -  "Number of remaining duplicates for each consequence" 
+#|  -  "Duplicates in coding regions"
+#|  -  "Genes with duplications that were not resolved" 
+
+# TODO: Why so many duplicates in cannonical splice sites?  - look at them
+clinvar_scored_unique <- remove_duplicates(clinvar_scored)
+
+remaining_dups <- clinvar_scored_unique |> group_by(Ident) |> add_count() |>
+  filter(n > 1) |> ungroup()
+
+remaining_dups |> 
+  group_by(Ident) |>
+  slice_head(n = 1) |> 
+  group_by(Consequence) |>
+  count() |> arrange(desc(n)) |> kable()
+  
+remaining_dups |>
+  filter(AnnoType == "CodingTranscript") |>
+  select(Chrom, Pos, Ref, Alt, Consequence, GeneName, FeatureID, Exon, cDNApos, relcDNApos, protPos, relProtPos) |> kable()
+
+
+remaining_dups |> 
+  filter(AnnoType == "CodingTranscript") |> select(GeneName) |> unique() |> kable()
+
 ```
+
+```{r}
+#| tbl-cap: "Overview of remaining duplicates using ConScore and rel. Protein position"
+#| tbl-subcap:
+#|  -  "Number of remaining duplicates for each consequence" 
+#|  -  "Duplicates in coding regions"
+#|  -  "Genes with duplications that were not resolved" 
+clinvar_scored_unique_prot <- remove_duplicates(clinvar_scored, pos = relProtPos)
+
+remaining_dups <- clinvar_scored_unique_prot |> group_by(Ident) |> add_count() |>
+  filter(n > 1) |> ungroup()
+
+remaining_dups |> 
+  group_by(Ident) |>
+  slice_head(n = 1) |> 
+  group_by(Consequence) |>
+  count() |> arrange(desc(n)) |> kable()
+  
+remaining_dups |>
+  filter(AnnoType == "CodingTranscript") |>
+  select(Ident, Consequence, GeneName, FeatureID, Exon, cDNApos, relcDNApos, protPos, relProtPos) |> kable()
+
+
+remaining_dups |> 
+  filter(AnnoType == "CodingTranscript") |> select(GeneName) |> unique() |> kable()
+
+rm(clinvar_scored_unique_prot)
+rm(remaining_dups)
+```
+
+```{r}
+# Resolve remaining duplicates randomly
+# TODO: resolve duplicates in coding region manually?
+# TODO: add slice_sample to `remove_duplicates()`
+clinvar_scored_unique <- clinvar_scored_unique |> group_by(Ident) |> 
+  slice_sample(n = 1)
+
+```
+
+`clinvar_scored_unique` only returns unique Ids: `r nrow(clinvar_scored_unique) == length(unique(clinvar_scored_unique$Ident))   `   
+
+
+ `clinvar_scored_unique` has same amount of entries as previously determined number of unique variants: `r n_unique_variants == nrow(clinvar_scored_unique)`
+
+
+
+
+
 
 # Descriptives for the Phred Score of different annotation/ Consequences
 
--   **TODO** Everything here is most likely meaningless because of the way the duplicates are removed
+-   **TODO** Continue here, analysis should now be less meaningless...
 
 ```{r}
 #| message: false
