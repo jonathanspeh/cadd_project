@@ -1,0 +1,129 @@
+---
+title: "Gnomad Overlaps"
+author: "Jonathan Speh"
+format:
+  html:
+    code-fold: true
+    code-tools: true
+    df-print: kable
+engine: knitr
+bibliography: references.bib
+---
+
+# Dependencies
+
+```{r}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+#library(ggridges)
+#library(knitr)
+source("code/helpers.R")
+```
+
+# Data prepration
+
+```{bash}
+#| eval: false
+
+cd data/
+# Download Gnomad Exome data
+wget https://storage.googleapis.com/gcp-public-data--gnomad/release/4.0/vcf/exomes/gnomad.exomes.v4.0.sites.chr{1..22,X,Y}.vcf.bgz
+
+# Select entries with pass flag
+(for i in {1,{10..19},2,{20..22},{3..9},X,Y}; do zcat data/gnomad.exomes.v4.0.sites.chr${i}.vcf.bgz | awk 'BEGIN{ OFS="\t"; FS="\t"}{if ($7 == "PASS") print }' | sed s/'^chr'//g | sort -k1,1 -k2,2n -k4,4 -k5,5; done ) | gzip -c > gnomad.exomes.v4.0.sites.PASS.vcf.gz
+
+# ClinVar pathogenic overlap with gnomAD
+
+( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat clinvar_20231112.pathogenic_SNVs_CADDv1.6_anno.tsv.gz | tail -n +3 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > clinvar_20231112.pathogenic_SNVs_CADDv1.6_anno.gnomad-exome_overlap.tsv.gz
+
+
+# PHRED 40 CADD score overlap with gnomAD
+
+( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | tail -n +2 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.gnomad-exome_overlap.tsv.gz
+
+# ALL POTENTIAL STOP GAINED overlap gnomAD
+
+( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat GRCh38_CADDv1.6_SNVs_STOP_GAINED.tsv.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz
+
+cd ../
+```
+
+# Overlap PHRED \> 40 - Gnomad
+
+## Load and check file
+
+```{r}
+keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
+         "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
+         "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
+         "relcDNApos", "protPos", "relProtPos", "RawScore", "PHRED", 
+         "GnomAD_Exomes" = "GenomAD-Exomes")
+
+
+overlap_phred40 <- fread(
+  "data/GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.gnomad-exome_overlap.tsv.gz") |> 
+  select(all_of(keep)) |> 
+  filter(!Chrom %in% c("X", "Y")) |>  
+  mutate("ChromPos" = paste(Chrom, Pos, sep=":"), 
+         "Ident" = paste(ChromPos, Ref, Alt, sep = ":")) 
+
+overlap_phred40_unique <- remove_duplicates(overlap_phred40)
+
+```
+
+Check if all Variants in `overlap_phred40_unique` are unique: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40_unique$Ident))`
+
+Check if number of entries in `overlap_phred40_unique` equals unique ids in `overlap_phred40`: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40$Ident))`
+
+Check if all Variants are SNVs: `r mean(overlap_phred40_unique$Type == "SNV") == 1`
+
+## Parse Gnomad
+
+```{r}
+overlap_phred40_unique_parsed <- parse_gnomad(overlap_phred40_unique)
+```
+
+Check if parsing kept IDs. intakt: `r mean(overlap_phred40_unique[,1:10] == overlap_phred40_unique_parsed[,1:10]) == 1`
+
+# Description of resulting data
+
+A total of `r nrow(overlap_phred40)` overlaps, resulting in `r nrow(overlap_phred40_unique)` unique variants where found (excluding sex chromosomes).
+
+All overlaps where in coding regions, and most of them where Stop-Gains
+
+```{r}
+#| tbl-cap: "Most variants with a Phred > 40 are Stop-gains" 
+
+overlap_phred40_unique_parsed |> group_by(Consequence) |> count() |> arrange(desc(n))
+
+
+overlap_phred40_unique_parsed |> 
+  ggplot(aes(x = PHRED)) +
+  geom_bar(stat = "count")
+```
+
+## Allele frequencies of predicted deleterious Variants found in GnomAD
+
+```{r}
+#| tbl-cap: "Allele frequencies of the observed variants" 
+#| tbl-subcap: 
+#|  -  "Most Variants have only been observed once or a few times"
+#|  -  "Variants with an AC > 50"
+
+overlap_phred40_unique_parsed |>
+  group_by(AC) |> count() |> arrange(desc(n))
+  
+overlap_phred40_unique_parsed |> arrange(desc(AC)) |> 
+  select(Chrom, Pos, Ref, Alt, GeneName, relcDNApos, AC, AF, PHRED) |> 
+  filter(AC > 50) |>
+  mutate(AF = format(AF, scientific = FALSE))
+
+```
+
+### Description of the Variants with high AC / AF
+
+**Continue here:** - annotate Genes with hight AFs - describe top hits
+
+# Overlap STOP Gain - Gnomad
