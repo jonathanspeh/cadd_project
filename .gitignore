@@ -50,6 +50,8 @@ rsconnect/
 
 # Data
 data/
+processed_data/
+
 
 # Dowload Script
 code/download_raw.sh
