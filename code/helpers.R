@@ -8,10 +8,15 @@ remove_duplicates <- function(cadd_data, id = Ident, pos = relcDNApos) {
   }
 
 
-
-
-#TODO - Process gnomad overlaps
-# process_overlaps <- function(tsv, keep = keep){}
+# Process Overlaps with gnomad
+process_caddscoring <- function(.data, cols = keep, autosomes_only = TRUE){
+  processed <- .data |>
+    dplyr::select(dplyr::all_of({{ cols }})) |>
+    dplyr::mutate("ChromPos" = paste(Chrom, Pos, sep=":"), 
+                  "Ident" = paste(ChromPos, Ref, Alt, sep = ":"))
+  if(autosomes_only) processed <- dplyr::filter(processed, !Chrom %in% c("X", "Y"))
+  return(processed)
+}
 
 
 # Parse gnomad column
