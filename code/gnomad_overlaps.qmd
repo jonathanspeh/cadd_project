@@ -7,12 +7,15 @@ format:
     code-tools: true
     df-print: kable
 engine: knitr
+execute: 
+  cache: true
 bibliography: references.bib
 ---
 
 # Dependencies
 
 ```{r}
+#| label: setup
 #| message: false
 library(data.table)
 library(dplyr)
@@ -26,6 +29,7 @@ source("code/helpers.R")
 # Data prepration
 
 ```{bash}
+#| label: prepare-overlaps
 #| eval: false
 
 cd data/
@@ -56,6 +60,7 @@ cd ../
 ## Load and check file
 
 ```{r}
+#| label: process-phred40-overlap
 keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
          "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
          "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
@@ -68,6 +73,8 @@ overlap_phred40 <- process_caddscoring(fread("data/GRCh38_CADDv1.6_whole_genome_
                                     autosomes_only = TRUE) 
 overlap_phred40_unique <- remove_duplicates(overlap_phred40)
 
+# Parse Gnomad
+overlap_phred40_unique_parsed <- parse_gnomad(overlap_phred40_unique)
 ```
 
 Check if all Variants in `overlap_phred40_unique` are unique: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40_unique$Ident))`
@@ -75,12 +82,6 @@ Check if all Variants in `overlap_phred40_unique` are unique: `r nrow(overlap_ph
 Check if number of entries in `overlap_phred40_unique` equals unique ids in `overlap_phred40`: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40$Ident))`
 
 Check if all Variants are SNVs: `r mean(overlap_phred40_unique$Type == "SNV") == 1`
-
-## Parse Gnomad
-
-```{r}
-overlap_phred40_unique_parsed <- parse_gnomad(overlap_phred40_unique)
-```
 
 Check if parsing kept IDs. intact: `r mean(overlap_phred40_unique[,1:10] == overlap_phred40_unique_parsed[,1:10]) == 1`
 
@@ -91,6 +92,7 @@ A total of `r nrow(overlap_phred40)` overlaps, resulting in `r nrow(overlap_phre
 All overlaps where in coding regions, and most of them where Stop-Gains
 
 ```{r}
+#| label: summarise-phreds
 #| tbl-cap: "Most variants with a Phred > 40 are Stop-gains" 
 
 overlap_phred40_unique_parsed |> group_by(Consequence) |> count() |> arrange(desc(n))
@@ -104,6 +106,7 @@ overlap_phred40_unique_parsed |>
 ## Allele frequencies of predicted deleterious Variants found in GnomAD
 
 ```{r}
+#| label: af-phred40
 #| tbl-cap: "Allele frequencies of the observed variants" 
 #| tbl-subcap: 
 #|  -  "Most Variants have only been observed once or a few times"
@@ -125,11 +128,14 @@ overlap_phred40_unique_parsed |> arrange(desc(AC)) |>
 
 # Overlap Stop Gain - Gnomad
 ```{r}
+#| label: process-stopgain-gnomad
+
 overlap_stopgain <- process_caddscoring(fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz"),
                                      cols = keep, autosomes_only = TRUE) 
 
 overlap_stopgain_unique <- remove_duplicates(overlap_stopgain)
 
+overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)
 ```
 
 Check if all Variants in `overlap_stopgain_unique` are unique: `r nrow(overlap_stopgain_unique) == length(unique(overlap_stopgain_unique$Ident))`
@@ -138,14 +144,7 @@ Check if number of entries in `overlap_stopgain_unique` equals unique ids in `ov
 
 Check if all Variants are SNVs: `r mean(overlap_stopgain_unique$Type == "SNV") == 1`
 
-
 Check if all Variants are Stop Gains: `r mean(overlap_stopgain_unique$Consequence == "STOP_GAINED") == 1`
-
-## Parse Gnomad
-
-```{r}
-overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)
-```
 
 Check if parsing kept IDs. intact: `r mean(overlap_stopgain_unique[,1:10] == overlap_stopgain_unique_parsed[,1:10]) == 1`
 
@@ -154,6 +153,7 @@ Check if parsing kept IDs. intact: `r mean(overlap_stopgain_unique[,1:10] == ove
 A total of `r nrow(overlap_stopgain)` overlaps, resulting in `r nrow(overlap_stopgain_unique)` unique variants where found (excluding sex chromosomes).
 
 ```{r}
+#| label: plot-stopgain-phreds
 #| fig-cap: "Distrubtion of the PHRED Scores of stop-gains in Gnomad. Vertical line indicates median PHRED"
 
 overlap_stopgain_unique_parsed |>
@@ -171,6 +171,7 @@ overlap_stopgain_unique_parsed |> head()
 
 ## Allele frequencies
 ```{r}
+#| label: plot-stopgain-af
 #| tbl-cap: "Allele frequencies of the stopgains that were observed in Gnomad" 
 #| tbl-subcap: 
 #|  -  "Most Variants have only been observed once or a few times"
@@ -204,10 +205,12 @@ mutate(overlap_stopgain_AC50, AF = format(AF, scientific = FALSE))
 ## relative Position in gene
 
 **TODO:**
+-  Write all_positions to disc and reload in new chunk
 -  Plot distribution of relcDNApos of all theoretical vs. observed stopgains
 
 
 ```{r}
+#| label: plot-rel-pos
 all_stopgains <- fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.tsv.gz")
 colnames(all_stopgains) <- fread("data/CADD_columns.txt")$V2
 all_stopgains <- process_caddscoring(all_stopgains, 
@@ -220,15 +223,24 @@ all_stopgains <- process_caddscoring(all_stopgains,
                                      autosomes_only = TRUE)
 
 all_stopgains_unique <- remove_duplicates(all_stopgains)
+all_stopgains_unique <- all_stopgains_unique |> group_by(Ident) |> 
+  slice_sample(n = 1)
 
-nrow(all_stopgains_unique) == length(unique(all_stopgains_unique$Ident))
+# TODO - continue here with writing to disc
+
+observed_stopgain_positions <- overlap_stopgain_unique_parsed$relcDNApos
+all_stopgain_positions <- all_stopgains_unique$relcDNApos
+sample_stopgain_positions <- sample(all_stopgain_positions, length(observed_stopgain_position), 
+                                    replace = FALSE)
 
 
-# TODO - continue here
+positions <- data.frame(position = c(observed_stopgain_position, all_stopgain_position),
+                        flag = c(rep("observed", length(observed_stopgain_position)),
+                                 rep("simulated", length(all_stopgain_position))))
 
-
-observed_stopgains <- overlap_stopgain_unique_parsed$relcDNApos
-
+positions |> 
+  ggplot(aes(x = position, colour = flag, fill = flag)) +
+  geom_density(alpha = 0.1)
 
 
 ```

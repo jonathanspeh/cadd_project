@@ -4,7 +4,7 @@ remove_duplicates <- function(cadd_data, id = Ident, pos = relcDNApos) {
     dplyr::slice_max(ConsScore, with_ties = TRUE) |>
     dplyr::slice_min({{ pos }}, with_ties = TRUE) |>
     dplyr::arrange(Chrom, Pos) |> 
-    ungroup()
+    dplyr::ungroup()
   }
 
 

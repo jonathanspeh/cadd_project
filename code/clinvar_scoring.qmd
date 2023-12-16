@@ -7,12 +7,15 @@ format:
     code-tools: true
     df-print: kable
 engine: knitr
+execute: 
+  cache: true
 bibliography: references.bib
 ---
 
 ## Dependencies
 
 ```{r}
+#| label: setup
 #| message: false
 
 library(data.table)
@@ -35,6 +38,7 @@ source("code/helpers.R")
 -   already done by Martin
 
 ```{bash}
+#| label: prepare-clinvar-data
 #| eval: false
 # download data
 wget https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar_20231112.vcf.gz -P data/
@@ -44,6 +48,7 @@ zcat data/clinvar_20231112.vcf.gz | grep  ";CLNSIG=Pathogenic;" | awk 'BEGIN{ FS
 ```
 
 ```{r}
+#| label: check-clinvar-raw
 n_input <- read.table("data/clinvar_20231112.pathogenic_SNVs.vcf.gz") |> nrow()
 ```
 
@@ -59,6 +64,7 @@ A total of `r n_input` variants were uploaded by CADD.
     -   18 Variants with error in ref or alt. allele
 
 ```{bash}
+#| label: get-cadd-data
 #| message: false
 #| eval: false
 
@@ -71,6 +77,7 @@ gunzip data/clinvar_pathogenic_scored.tsv.gz
 ## Check and select scored data
 
 ```{r}
+#| label: process-clinvar-cadd
 #| message: false
 #| tbl-cap: CADD results for Clinvar Pathogenic Variants
 keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
@@ -104,6 +111,7 @@ CADD scoring returned `r n_hits` results for `r n_unique_variants` unique Varian
 ## Looking at the duplicates
 
 ```{r}
+#| label: show-duplicates
 #| tbl-cap: Positions with the most annotated Variants
 #| fig-cap: Distribution of the number of Annotation for individual Variants
 
@@ -139,6 +147,7 @@ multiple_annots |>
 -   Use relative cDNA positionRemaining Duplicates (e.g. variant annotated in two genes) to prioritize variants earlier in coding sequence
 
 ```{r}
+#| label: remove-duplicates
 #| tbl-cap: "Overview of remaining duplicates using ConScore and rel. cDNA position"
 #| tbl-subcap:
 #|  -  "Number of remaining duplicates for each consequence" 
@@ -167,11 +176,6 @@ remaining_dups |>
   filter(AnnoType == "CodingTranscript") |> select(GeneName) |> 
   unique()
 
-rm(clinvar_scored_unique_prot)
-rm(remaining_dups)
-```
-
-```{r}
 # Resolve remaining duplicates randomly
 # TODO: resolve duplicates in coding region manually?
 # TODO: add slice_sample to `remove_duplicates()`
@@ -193,6 +197,7 @@ Check if all Variants are SNVs: `r mean(clinvar_scored_unique$Type == "SNV") == 
 -   **TODO** Continue here, analysis should now be less meaningless...
 
 ```{r}
+#| label: describe-clinvar-phred
 #| message: false
 #| tbl-cap: "Description of the PHRED scores"
 #| tbl-subcap: 
@@ -218,6 +223,7 @@ rm(clinvar_scored_unique_summary)
 ```
 
 ```{r}
+#| label: plot-clinvar-phred
 #| fig-cap: 
 #|   -  " Distribution of the Phred Scores"
 #|   -  "Distribution of Phred Scores for different Annotation Types"
@@ -254,15 +260,15 @@ clinvar_scored_unique |>
 
     -   A fixed Threshold (e.g. 15 used in [@reid2023]) will miss candidates
 
-    ```{r}
-    clinvar_scored_unique |> filter(PHRED <= 15) |> nrow()
-    clinvar_scored_unique |> filter(PHRED <= 10) |> nrow()
-    clinvar_scored_unique |> filter(PHRED <= 1) |> nrow()
-
-    ```
 
 ```{r}
+#| label: low-phred-variants
 #| message: false
+clinvar_scored_unique |> filter(PHRED <= 15) |> nrow()
+clinvar_scored_unique |> filter(PHRED <= 10) |> nrow()
+clinvar_scored_unique |> filter(PHRED <= 1) |> nrow()
+
+
 clinvar_scored_unique |> group_by(Ref, Alt) |> summarise(n = n(), mean_phred = mean(PHRED)) |> arrange(desc(n))
 
 

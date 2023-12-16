@@ -60,3 +60,4 @@ code/download_raw.sh
 /.quarto/
 /quarto_output
 code/references.bib
+code/*_files/
