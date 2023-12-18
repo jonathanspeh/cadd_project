@@ -5,7 +5,9 @@ format:
   html:
     code-fold: true
     code-tools: true
-    df-print: kable
+    df-print: paged 
+    tbl-cap-location: top
+    code-overflow: wrap
 engine: knitr
 execute: 
   cache: true
@@ -22,7 +24,7 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 library(ggridges)
-library(knitr)
+#library(knitr)
 source("code/helpers.R")
 ```
 
@@ -181,6 +183,7 @@ remaining_dups |>
 # TODO: add slice_sample to `remove_duplicates()`
 clinvar_scored_unique <- clinvar_scored_unique |> group_by(Ident) |> 
   slice_sample(n = 1)
+
 
 ```
 
