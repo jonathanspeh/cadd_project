@@ -75,6 +75,7 @@ overlap_phred40_unique <- remove_duplicates(overlap_phred40)
 
 # Parse Gnomad
 overlap_phred40_unique_parsed <- parse_gnomad(overlap_phred40_unique)
+fwrite(overlap_phred40_unique_parsed, "processed_data/overlap_phred40_processed.csv")
 ```
 
 Check if all Variants in `overlap_phred40_unique` are unique: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40_unique$Ident))`
@@ -191,12 +192,18 @@ overlap_stopgain <- process_caddscoring(fread("data/GRCh38_CADDv1.6_SNVs_STOP_GA
 
 overlap_stopgain_unique <- remove_duplicates(overlap_stopgain)
 
+<<<<<<< HEAD
 overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)i
 
 fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz") |> group_by(`#Chrom`) |> count() |> arrange(`#Chrom`)
 
 fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz") |> filter(`#Chrom`== "10")
 
+=======
+overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)
+
+fwrite(overlap_stopgain_unique_parsed, "processed_data/overlap_stopgain_processed.csv")
+>>>>>>> 2a717c3 (Adden SNV description, noticed missing Chromosomes.)
 ```
 
 Check if all Variants in `overlap_stopgain_unique` are unique: `r nrow(overlap_stopgain_unique) == length(unique(overlap_stopgain_unique$Ident))`
