@@ -1,0 +1,51 @@
+---
+title: "dev"
+format: 
+  html: 
+   df-print: paged
+execute: 
+  cache: true
+---
+
+```{r}
+#| label: setup
+#| message: false
+library(data.table)
+library(dplyr)
+library(dbplyr)
+library(biomaRt)
+```
+
+```{r}
+#| label: load-data
+overlap_stopgain <- fread("processed_data/overlap_stopgain_processed.csv")
+
+```
+
+
+-   biomaRt requires dbplyr version 2.3.4 (needs manual downgrad) or alternatively BiocFileCache 3.18 (needs r 4.3)
+-   Using dbplyr downgrade for now
+
+
+```{r}
+#| label: initialise-biomaRt
+listEnsembl()
+
+# Version of used dataset:
+searchDatasets(ensembl, pattern = "hsapiens")
+ensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
+
+
+searchFilters(ensembl, pattern = "gene")
+filter = "ensembl_gene_id"
+
+
+listAttributes(ensembl)
+searchAttributes(ensembl, pattern = "goslim")
+
+#TODO find correct attributes and continue with query 
+attributes <- c("go_id", "go_linkage_type", "goslim_goa_accession", "goslim_goa_description")
+
+
+```
+
