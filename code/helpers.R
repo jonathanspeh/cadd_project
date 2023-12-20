@@ -31,4 +31,15 @@ parse_gnomad <- function(gnomad_data, column = GnomAD_Exomes){
 
 
 
-
+# Print SNV information
+print_snv_info <- function(data, row){
+  data <- data <- data[row,]
+  out <- data|>
+    mutate("Position" = paste0(Chrom, ":", Pos)) |>
+    dplyr::select(all_of(c("Position", "Ref", "Alt", "Allele Count" = "AC", 
+                       "Allele Frequency" = "AF", "PHRED", "Gene" = "GeneName"))) |>
+    t() |> data.frame() 
+  
+  colnames(out) <- " "
+  out
+  }
