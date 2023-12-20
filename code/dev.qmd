@@ -9,6 +9,7 @@ execute:
 
 ```{r}
 #| label: setup
+#| force: true
 #| message: false
 library(data.table)
 library(dplyr)
@@ -29,23 +30,40 @@ overlap_stopgain <- fread("processed_data/overlap_stopgain_processed.csv")
 
 ```{r}
 #| label: initialise-biomaRt
-listEnsembl()
 
+listEnsembl()
+ensembl <- useEnsembl("genes")
 # Version of used dataset:
 searchDatasets(ensembl, pattern = "hsapiens")
 ensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
 
 
-searchFilters(ensembl, pattern = "gene")
-filter = "ensembl_gene_id"
+searchFilters(ensembl, pattern = "hgnc")
+bm_filter = "ensembl_gene_id"
 
 
 listAttributes(ensembl)
-searchAttributes(ensembl, pattern = "goslim")
+searchAttributes(ensembl, pattern = "go")
 
 #TODO find correct attributes and continue with query 
-attributes <- c("go_id", "go_linkage_type", "goslim_goa_accession", "goslim_goa_description")
+bm_attributes <- c("ensembl_gene_id","hgnc_symbol","go_id", "goslim_goa_description", "interpro_description")
+
+test_set <- overlap_stopgain[1:10, c(1:4,11,12)]
+
+
+getBM(attributes = bm_attributes,
+      filters = bm_filter,
+      values = test_set$GeneID,
+      mart = ensembl)
+
+library(dplyr)
+
+overlap_stopgain |> group_by(GeneID) |> 
+  slice_max(order_by = PHRED, n = 1) |>
+  dplyr::select(all_of(c("GeneID", "PHRED"))) |>
+  fwrite("processed_data/genelist.csv")
 
 
 ```
+
 
