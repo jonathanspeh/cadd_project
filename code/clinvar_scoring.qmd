@@ -18,6 +18,7 @@ bibliography: references.bib
 
 ```{r}
 #| label: setup
+#| force: true
 #| message: false
 
 library(data.table)

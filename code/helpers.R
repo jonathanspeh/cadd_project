@@ -35,11 +35,15 @@ parse_gnomad <- function(gnomad_data, column = GnomAD_Exomes){
 print_snv_info <- function(data, row){
   data <- data <- data[row,]
   out <- data|>
+<<<<<<< Updated upstream
 <<<<<<< HEAD
     mutate("Position" = paste0(Chrom, ":", Pos)) |>
 =======
     dplyr::mutate("Position" = paste0(Chrom, ":", Pos)) |>
 >>>>>>> 2a717c3 (Adden SNV description, noticed missing Chromosomes.)
+=======
+    dplyr::mutate("Position" = paste0(Chrom, ":", Pos)) |>
+>>>>>>> Stashed changes
     dplyr::select(all_of(c("Position", "Ref", "Alt", "Allele Count" = "AC", 
                        "Allele Frequency" = "AF", "PHRED", "Gene" = "GeneName"))) |>
     t() |> data.frame() 
