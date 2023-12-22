@@ -191,7 +191,7 @@ overlap_stopgain <- process_caddscoring(fread("data/GRCh38_CADDv1.6_SNVs_STOP_GA
 
 overlap_stopgain_unique <- remove_duplicates(overlap_stopgain)
 
-overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)i
+overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)
 
 fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz") |> group_by(`#Chrom`) |> count() |> arrange(`#Chrom`)
 
