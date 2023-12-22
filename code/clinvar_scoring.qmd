@@ -34,21 +34,7 @@ source("code/helpers.R")
 -   Retrieve CADD scores and used annotations for all Clinvar SNVs that are annotated as pathogenic
 -   ClinVar Data were retrived on 21.11.2023, version is 12.11.2023
 
-# Prepare and score Data
-
-## Prepare Data
-
--   already done by Martin
-
-```{bash}
-#| label: prepare-clinvar-data
-#| eval: false
-# download data
-wget https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar_20231112.vcf.gz -P data/
-
-#filter pathogenic SNVs from Clinvar data and remove duplicates
-zcat data/clinvar_20231112.vcf.gz | grep  ";CLNSIG=Pathogenic;" | awk 'BEGIN{ FS="\t"; OFS="\t" }{ if ((length($4) == 1) && (length($5) == 1)) print $1,$2,".",$4,$5 }' | sort -k1,1 -k2,2n | uniq | gzip -c > data/clinvar_20231112.pathogenic_SNVs.vcf.gz
-```
+# Score Data
 
 ```{r}
 #| label: check-clinvar-raw

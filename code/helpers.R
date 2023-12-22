@@ -1,13 +1,3 @@
-# Remove duplicates based on Consequence Score and smallest relative Position in gene  
-remove_duplicates <- function(cadd_data, id = Ident, pos = relcDNApos) {
-  cadd_data |> dplyr::group_by({{ id }}) |>
-    dplyr::slice_max(ConsScore, with_ties = TRUE) |>
-    dplyr::slice_min({{ pos }}, with_ties = TRUE) |>
-    dplyr::arrange(Chrom, Pos) |> 
-    dplyr::ungroup()
-  }
-
-
 # Process Overlaps with gnomad
 process_caddscoring <- function(.data, cols = keep, autosomes_only = TRUE){
   processed <- .data |>
@@ -17,6 +7,16 @@ process_caddscoring <- function(.data, cols = keep, autosomes_only = TRUE){
   if(autosomes_only) processed <- dplyr::filter(processed, !Chrom %in% c("X", "Y"))
   return(processed)
 }
+
+
+# Remove duplicates based on Consequence Score and smallest relative Position in gene  
+remove_duplicates <- function(cadd_data, id = Ident, pos = relcDNApos) {
+  cadd_data |> dplyr::group_by({{ id }}) |>
+    dplyr::slice_max(ConsScore, with_ties = TRUE) |>
+    dplyr::slice_min({{ pos }}, with_ties = TRUE) |>
+    dplyr::arrange(Chrom, Pos) |> 
+    dplyr::ungroup()
+  }
 
 
 # Parse gnomad column
@@ -35,15 +35,9 @@ parse_gnomad <- function(gnomad_data, column = GnomAD_Exomes){
 print_snv_info <- function(data, row){
   data <- data <- data[row,]
   out <- data|>
-<<<<<<< Updated upstream
-<<<<<<< HEAD
     mutate("Position" = paste0(Chrom, ":", Pos)) |>
-=======
     dplyr::mutate("Position" = paste0(Chrom, ":", Pos)) |>
->>>>>>> 2a717c3 (Adden SNV description, noticed missing Chromosomes.)
-=======
     dplyr::mutate("Position" = paste0(Chrom, ":", Pos)) |>
->>>>>>> Stashed changes
     dplyr::select(all_of(c("Position", "Ref", "Alt", "Allele Count" = "AC", 
                        "Allele Frequency" = "AF", "PHRED", "Gene" = "GeneName"))) |>
     t() |> data.frame() 

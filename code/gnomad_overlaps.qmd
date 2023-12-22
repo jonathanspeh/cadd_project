@@ -27,34 +27,6 @@ library(tidyr)
 source("code/helpers.R")
 ```
 
-# Data prepration
-
-```{bash}
-#| label: prepare-overlaps
-#| eval: false
-
-cd data/
-# Download Gnomad Exome data
-wget https://storage.googleapis.com/gcp-public-data--gnomad/release/4.0/vcf/exomes/gnomad.exomes.v4.0.sites.chr{1..22,X,Y}.vcf.bgz
-
-# Select entries with pass flag
-(for i in {1,{10..19},2,{20..22},{3..9},X,Y}; do zcat data/gnomad.exomes.v4.0.sites.chr${i}.vcf.bgz | awk 'BEGIN{ OFS="\t"; FS="\t"}{if ($7 == "PASS") print }' | sed s/'^chr'//g | sort -k1,1 -k2,2n -k4,4 -k5,5; done ) | gzip -c > gnomad.exomes.v4.0.sites.PASS.vcf.gz
-
-# ClinVar pathogenic overlap with gnomAD
-
-( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat clinvar_20231112.pathogenic_SNVs_CADDv1.6_anno.tsv.gz | tail -n +3 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > clinvar_20231112.pathogenic_SNVs_CADDv1.6_anno.gnomad-exome_overlap.tsv.gz
-
-
-# PHRED 40 CADD score overlap with gnomAD
-
-( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | tail -n +2 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.gnomad-exome_overlap.tsv.gz
-
-# ALL POTENTIAL STOP GAINED overlap gnomAD
-
-( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat GRCh38_CADDv1.6_SNVs_STOP_GAINED.tsv.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz
-
-cd ../
-```
 
 # Overlap PHRED \> 40 - Gnomad
 
@@ -62,6 +34,7 @@ cd ../
 
 ```{r}
 #| label: process-phred40-overlap
+
 keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
          "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
          "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
