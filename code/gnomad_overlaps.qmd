@@ -64,24 +64,26 @@ cd ../
 
 ```{r}
 #| label: process-phred40-overlap
-keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
-         "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
-         "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
-         "relcDNApos", "protPos", "relProtPos", "RawScore", "PHRED", 
-         "GnomAD_Exomes" = "GenomAD-Exomes")
+keep_dt <- c("Chrom", "Pos", "Ref", "Alt", "Type", "Length",
+          "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
+          "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
+          "relcDNApos", "protPos", "relProtPos", "RawScore", "PHRED", 
+          "GnomAD_Exomes")
 
 
-overlap_phred40 <- process_caddscoring(fread("data/GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.gnomad-exome_overlap.tsv.gz"),
-                                    cols = keep, 
+overlap_phred40 <- process_caddscoring_dt(fread("data/GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.gnomad-exome_overlap.tsv.gz"),
+                                    cols = keep_dt, 
                                     autosomes_only = TRUE) 
-overlap_phred40_unique <- remove_duplicates(overlap_phred40)
+
+overlap_phred40 <- utils::type.convert(overlap_phred40, as.is = TRUE)
+overlap_phred40_unique <- remove_duplicates_dt(overlap_phred40)
 
 
 # Parse Gnomad
 overlap_phred40_unique_parsed <- get_afs(overlap_phred40_unique)
 
 
-overlap_phred40_unique_parsed |> group_by(Chrom) |> count()
+overlap_phred40_unique |> group_by(Chrom) |> count()
 ```
 
 Check if all Variants in `overlap_phred40_unique` are unique: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40_unique$Ident))`
@@ -195,10 +197,10 @@ phred40_AC50[, -5]
 #| label: process-stopgain-gnomad
 #| dependson: process-phred40-overlap 
 
-overlap_stopgain <- process_caddscoring(fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz"),
+overlap_stopgain <- process_caddscoring_dt(fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz"),
                                      cols = keep, autosomes_only = TRUE) 
 
-overlap_stopgain_unique <- remove_duplicates(overlap_stopgain)
+overlap_stopgain_unique <- remove_duplicates_dt(overlap_stopgain)
 
 overlap_stopgain_unique_parsed <- get_afs(overlap_stopgain_unique)
 

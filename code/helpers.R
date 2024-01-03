@@ -7,7 +7,12 @@ remove_duplicates <- function(cadd_data, id = Ident, pos = relcDNApos) {
     dplyr::ungroup()
   }
 
-
+remove_duplicates_dt <- function(cadd_data, id = "Ident") {
+  require(data.table)
+  cadd_data <-  as.data.table(cadd_data)
+  cadd_data <- cadd_data[cadd_data[, .I[ConsScore == max(ConsScore)], by = id]$V1]
+  cadd_data[cadd_data[, .I[relcDNApos == min(relcDNApos)], by = id]$V1]
+}
 
 
 
@@ -22,6 +27,16 @@ process_caddscoring <- function(.data, cols = keep, autosomes_only = TRUE){
                   "Ident" = paste(ChromPos, Ref, Alt, sep = ":"))
   if(autosomes_only) processed <- dplyr::filter(processed, !Chrom %in% c("X", "Y"))
   return(processed)
+}
+
+process_caddscoring_dt <- function(.data, cols = keep, autosomes_only = TRUE){
+  DT <- data.table(.data)
+  colnames(DT)[which(colnames(DT)=="#Chrom")] <- "Chrom"
+  colnames(DT)[which(colnames(DT)=="GenomAD-Exomes")] <- "GnomAD_Exomes"
+  DT <- DT[, ..cols]
+  DT[, Ident := paste0(Chrom, ":", Pos, Ref, ">", Alt)]
+  if(autosomes_only) DT <- DT[!Chrom %in% c("X", "Y")]
+  tibble(DT)
 }
 
 
