@@ -10,7 +10,7 @@ format:
     code-overflow: wrap
 engine: knitr
 execute: 
-  cache: true
+  cache: false
 bibliography: references.bib
 ---
 
@@ -18,7 +18,6 @@ bibliography: references.bib
 
 ```{r}
 #| label: setup
-#| force: true
 #| message: false
 library(data.table)
 library(dplyr)
@@ -27,13 +26,44 @@ library(tidyr)
 source("code/helpers.R")
 ```
 
+# Data prepration
+
+```{bash}
+#| label: prepare-overlaps
+#| eval: false
+
+
+#TODO - change to new code from readme
+
+cd data/
+# Download Gnomad Exome data
+wget https://storage.googleapis.com/gcp-public-data--gnomad/release/4.0/vcf/exomes/gnomad.exomes.v4.0.sites.chr{1..22,X,Y}.vcf.bgz
+
+# Select entries with pass flag
+(for i in {1,{10..19},2,{20..22},{3..9},X,Y}; do zcat data/gnomad.exomes.v4.0.sites.chr${i}.vcf.bgz | awk 'BEGIN{ OFS="\t"; FS="\t"}{if ($7 == "PASS") print }' | sed s/'^chr'//g | sort -k1,1 -k2,2n -k4,4 -k5,5; done ) | gzip -c > gnomad.exomes.v4.0.sites.PASS.vcf.gz
+
+# ClinVar pathogenic overlap with gnomAD
+
+( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat clinvar_20231112.pathogenic_SNVs_CADDv1.6_anno.tsv.gz | tail -n +3 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > clinvar_20231112.pathogenic_SNVs_CADDv1.6_anno.gnomad-exome_overlap.tsv.gz
+
+
+# PHRED 40 CADD score overlap with gnomAD
+
+( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | tail -n +2 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.gnomad-exome_overlap.tsv.gz
+
+# ALL POTENTIAL STOP GAINED overlap gnomAD
+
+( zcat GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.tsv.gz | head -n 1 | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $0,"GenomAD-Exomes" }' ; join --nocheck-order -t"$(echo -e '\t')" -j 1 <(zcat GRCh38_CADDv1.6_SNVs_STOP_GAINED.tsv.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ print $1":"$2":"$3">"$4,$0 }' ) <( zcat gnomad.exomes.v4.0.sites.PASS.vcf.gz | awk 'BEGIN{ OFS="\t"; FS="\t" }{ if ((length($4) == length($5)) && (length($4) == 1)) { print $1":"$2":"$4">"$5,$8 } }' ) | cut -f 2- ) | gzip -c > GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz
+
+cd ../
+```
+
 # Overlap PHRED \> 40 - Gnomad
 
 ## Load and check file
 
 ```{r}
 #| label: process-phred40-overlap
-
 keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
          "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
          "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
@@ -46,9 +76,12 @@ overlap_phred40 <- process_caddscoring(fread("data/GRCh38_CADDv1.6_whole_genome_
                                     autosomes_only = TRUE) 
 overlap_phred40_unique <- remove_duplicates(overlap_phred40)
 
+
 # Parse Gnomad
-overlap_phred40_unique_parsed <- parse_gnomad(overlap_phred40_unique)
-fwrite(overlap_phred40_unique_parsed, "processed_data/overlap_phred40_processed.csv")
+overlap_phred40_unique_parsed <- get_afs(overlap_phred40_unique)
+
+
+overlap_phred40_unique_parsed |> group_by(Chrom) |> count()
 ```
 
 Check if all Variants in `overlap_phred40_unique` are unique: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40_unique$Ident))`
@@ -104,21 +137,21 @@ phred40_AC50[, -5]
 
 ### Variants with high AC / AF
 
-**3:9384551C\>T (rs149283084)**\
+**WAS STILL WITH INCOMPLETE DATA**
+*Replace mastermind with litvar* [Link](https://www.ncbi.nlm.nih.gov/research/litvar2/)
+
+**3:9384551C\>T (rs149283084)**  
 `r print_snv_info(phred40_AC50, 1)`
 
 -   Stop gain in [THUMPD3](https://www.genecards.org/cgi-bin/carddisp.pl?gene=THUMPD3) (TRNA (Guanine(6)-N2)-Methyltransferase THUMP3)
     -   Involved in post-transcsriptional Modifikation of tRNA
-
     -   expressed in various cell- and tissue types, overexpressed in testes
-
-    -   KO-Cells show reduced global translation and reduced growth *in vitro* [@yang2021]
-
+    -   KO-Cells show reduced global translation and reduced growth *in vitro* @yang2021
     -   THUMPD3 AS-RNA seems to be more interesting...
 -   Variant so far not described in literature ([5X in Supplement](https://mastermind.genomenon.com/detail?gene=thumpd3&mutation=thumpd3:R463X&boolean=true&gene_op=and&mutation_op=and&cnv_op=and&disease_op=and&hpo_op=and&unii_op=and&keyword_op=and&pmid=32242007))
 -   Observed mainly in non-finish Europeans - No Homozygotes
 
-**4:958473C\>T (rs138246712)**\
+**4:958473C\>T (rs138246712)**  
 `r print_snv_info(phred40_AC50, 2)`
 
 -   Stop-gain in [TMEM175](https://www.genecards.org/cgi-bin/carddisp.pl?gene=TMEM175&keywords=TMEM175) - Transmembranprotein 175
@@ -128,7 +161,7 @@ phred40_AC50[, -5]
 -   Variant carriers younger than all invidivudals
 -   Not described in Literature ([3X in supplement](https://mastermind.genomenon.com/detail?mutation=NC_000004.12:g.958473C%3ET&pmid=22237106))
 
-**7:997651G\>A (rs372720975)**\
+**7:997651G\>A (rs372720975)**  
 `r print_snv_info(phred40_AC50, 3)`
 
 -   Stop-gain in [C7orf50](https://www.genecards.org/cgi-bin/carddisp.pl?gene=C7orf50) - Chromosome 7 Open Reading Frame 50 (uncharacterised)
@@ -136,7 +169,7 @@ phred40_AC50[, -5]
 -   Variant mainly observed in NFE, no homozygotes
 -   Variant is not described in Literature
 
-**3:8633680G\>A (rs749444916)**\
+**3:8633680G\>A (rs749444916)**  
 `r print_snv_info(phred40_AC50, 4)`
 
 -   Stop-gain in [SSUH2](https://www.genecards.org/cgi-bin/carddisp.pl?gene=SSUH2&keywords=SSUH2) Ssu2 Homolog
@@ -145,7 +178,7 @@ phred40_AC50[, -5]
 -   Variant mainly observed in Finnish and Non-finnish Europeans (Finnish 10X non-finnish)
 -   Not described in literature (1X in Supplement <https://mastermind.genomenon.com/detail?mutation=NC_000003.12:g.8633680G%3EA&pmid=25807282>)
 
-**3:8913706G\>A (rs536501018)**\
+**3:8913706G\>A (rs536501018)**  
 `r print_snv_info(phred40_AC50, 5)`
 
 -   Stop-gain in [RAD18](https://www.genecards.org/cgi-bin/carddisp.pl?gene=RAD18&keywords=RAD18) - E3 Ubiquitin Ligase
@@ -167,15 +200,8 @@ overlap_stopgain <- process_caddscoring(fread("data/GRCh38_CADDv1.6_SNVs_STOP_GA
 
 overlap_stopgain_unique <- remove_duplicates(overlap_stopgain)
 
-overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)
+overlap_stopgain_unique_parsed <- get_afs(overlap_stopgain_unique)
 
-fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz") |> group_by(`#Chrom`) |> count() |> arrange(`#Chrom`)
-
-fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz") |> filter(`#Chrom`== "10")
-
-overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)
-
-fwrite(overlap_stopgain_unique_parsed, "processed_data/overlap_stopgain_processed.csv")
 ```
 
 Check if all Variants in `overlap_stopgain_unique` are unique: `r nrow(overlap_stopgain_unique) == length(unique(overlap_stopgain_unique$Ident))`
@@ -241,6 +267,9 @@ mutate(overlap_stopgain_AC50, AF = format(AF, scientific = FALSE))
 overlap_stopgain_AC50 |> group_by(Chrom) |> count() |> arrange(desc(n))
 ```
 
+
+
+
 ## relative Position in gene
 
 **TODO:** - Write all_positions to disc and reload in new chunk - Plot distribution of relcDNApos of all theoretical vs. observed stopgains
@@ -291,3 +320,5 @@ positions |>
 
 
 ```
+
+
