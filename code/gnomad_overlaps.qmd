@@ -9,8 +9,8 @@ format:
     tbl-cap-location: top
     code-overflow: wrap
 engine: knitr
-execute: 
-  cache: false
+execute: true
+  cache: 
 bibliography: references.bib
 ---
 
@@ -81,16 +81,22 @@ overlap_phred40_unique <- remove_duplicates(overlap_phred40)
 overlap_phred40_unique_parsed <- get_afs(overlap_phred40_unique)
 
 
-overlap_phred40_unique_parsed |> group_by(Chrom) |> count()
+overlap_phred40_unique_parsed |> group_by(Ident) |> add_count() |> arrange(desc(n))
 ```
 
 Check if all Variants in `overlap_phred40_unique` are unique: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40_unique$Ident))`
 
-Check if number of entries in `overlap_phred40_unique` equals unique ids in `overlap_phred40`: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40$Ident))`
-
 Check if all Variants are SNVs: `r mean(overlap_phred40_unique$Type == "SNV") == 1`
 
 Check if parsing kept IDs. intact: `r mean(overlap_phred40_unique[,1:10] == overlap_phred40_unique_parsed[,1:10]) == 1`
+
+```{r}
+#| echo: false
+rm(overlap_phred40)
+rm(overlap_phred40_unique)
+```
+
+
 
 ## Description of resulting data
 
@@ -101,6 +107,7 @@ All overlaps where in coding regions, and most of them where Stop-Gains
 ```{r}
 #| label: summarise-phreds
 #| tbl-cap: "Most variants with a Phred > 40 are Stop-gains" 
+#| fig-cap: "Histogram of the phred scores > 40"
 
 overlap_phred40_unique_parsed |> group_by(Consequence) |> count() |> arrange(desc(n))
 
@@ -118,6 +125,7 @@ overlap_phred40_unique_parsed |>
 #| tbl-subcap: 
 #|  -  "Most Variants have only been observed once or a few times"
 #|  -  "Variants with an AC > 50"
+#|  -  "Variants where the minor allele is listes as reference" 
 
 overlap_phred40_unique_parsed |>
   group_by(AC) |> count() |> arrange(desc(n))
@@ -126,11 +134,13 @@ phred40_AC50 <- overlap_phred40_unique_parsed |> arrange(desc(AC)) |>
   dplyr::select(Chrom, Pos, Ref, Alt, Ident, GeneName, Consequence, cDNApos, relcDNApos, protPos, AC, AF, PHRED) |> 
   filter(AC > 50) |>
   mutate(AF = format(AF, scientific = FALSE))
-
-
 fwrite(phred40_AC50, "processed_data/phred40_AC50.csv")
 
 phred40_AC50[, -5]
+
+
+overlap_phred40_unique_parsed |> filter(AF > 0.5)
+
 ```
 
 `r nrow(phred40_AC50)` Variants with a PHRED score above 40 and an allele count above 50 were found in the gnomad DB. These variants had an mean PHRED of `r mean(phred40_AC50$PHRED)`
@@ -189,6 +199,15 @@ phred40_AC50[, -5]
 -   Carriers tend to be younger than non-carriers
 -   Not described in Literature
 
+
+```{r}
+#| echo: false
+fwrite(overlap_phred40_unique_parsed, "processed_data/phred40_parsed.csv")
+rm(overlap_phred40_unique_parsed)
+rm(phred40_AC50)
+```
+
+
 # Overlap Stop Gain - Gnomad
 
 ```{r}
@@ -206,13 +225,20 @@ overlap_stopgain_unique_parsed <- get_afs(overlap_stopgain_unique)
 
 Check if all Variants in `overlap_stopgain_unique` are unique: `r nrow(overlap_stopgain_unique) == length(unique(overlap_stopgain_unique$Ident))`
 
-Check if number of entries in `overlap_stopgain_unique` equals unique ids in `overlap_stopgain`: `r nrow(overlap_stopgain_unique) == length(unique(overlap_stopgain$Ident))`
-
 Check if all Variants are SNVs: `r mean(overlap_stopgain_unique$Type == "SNV") == 1`
 
 Check if all Variants are Stop Gains: `r mean(overlap_stopgain_unique$Consequence == "STOP_GAINED") == 1`
 
 Check if parsing kept IDs. intact: `r mean(overlap_stopgain_unique[,1:10] == overlap_stopgain_unique_parsed[,1:10]) == 1`
+
+```{r}
+#| echo: false
+rm(overlap_stopgain)
+rm(overlap_stopgain_unique)
+rm(keep)
+```
+
+
 
 ## Description of resulting data
 
@@ -224,11 +250,7 @@ A total of `r nrow(overlap_stopgain)` overlaps, resulting in `r nrow(overlap_sto
 
 overlap_stopgain_unique_parsed |>
   ggplot(aes(x = PHRED)) +
-  geom_density() +
-  geom_vline(aes(xintercept = median(PHRED)), linetype = 2)  
-
-
-overlap_stopgain_unique_parsed |> head()
+  geom_bar(stat = "count", width = 1)
   
 ```
 
@@ -252,7 +274,7 @@ overlap_stopgain_unique_parsed |>
 overlap_stopgain_unique_parsed |> 
   mutate(AC_100 = ifelse(AC > 100, TRUE, FALSE)) |>
   ggplot(aes(x = PHRED, colour = AC_100, fill = AC_100)) +
-  geom_density(alpha = 0.1)
+  geom_density(alpha = 0.1, bw = 1)
 
 
 overlap_stopgain_unique_parsed |>
@@ -316,7 +338,8 @@ positions <- data.frame(position = c(observed_stopgain_positions, all_stopgain_p
 
 positions |> 
   ggplot(aes(x = position, colour = flag, fill = flag)) +
-  geom_density(alpha = 0.1)
+  geom_density(alpha = 0.1) +
+  geom_vline()
 
 
 ```

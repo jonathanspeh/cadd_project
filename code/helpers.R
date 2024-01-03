@@ -1,15 +1,18 @@
 # Remove duplicates based on Consequence Score and smallest relative Position in gene  
 remove_duplicates <- function(cadd_data, id = Ident, pos = relcDNApos) {
-  cadd_data |> dplyr::group_by({{ id }}) |>
+  cadd_data <- cadd_data |> dplyr::group_by({{ id }}) |>
     dplyr::slice_max(ConsScore, with_ties = TRUE) |>
     dplyr::slice_min({{ pos }}, with_ties = TRUE) |>
     dplyr::arrange(Chrom, Pos) |> 
     dplyr::ungroup()
-  }
-
-
-
-
+  if(nrow(cadd_data) == length(unique(cadd_data$Ident))) {
+    cadd_data
+  } else {
+    warning("Not all duplicates could be resolved by ConsScore and Position. Remaining duplicates are resolved by chance ")
+    cadd_data |> 
+      group_by(Ident) |> 
+      slice_sample(n = 1)
+  }}
 
 
 
