@@ -10,7 +10,7 @@ format:
     code-overflow: wrap
 engine: knitr
 execute: 
-  cache: true
+  cache: false
 bibliography: references.bib
 ---
 
@@ -31,6 +31,9 @@ source("code/helpers.R")
 ```{bash}
 #| label: prepare-overlaps
 #| eval: false
+
+
+#TODO - change to new code from readme
 
 cd data/
 # Download Gnomad Exome data
@@ -73,8 +76,12 @@ overlap_phred40 <- process_caddscoring(fread("data/GRCh38_CADDv1.6_whole_genome_
                                     autosomes_only = TRUE) 
 overlap_phred40_unique <- remove_duplicates(overlap_phred40)
 
+
 # Parse Gnomad
-overlap_phred40_unique_parsed <- parse_gnomad(overlap_phred40_unique)
+overlap_phred40_unique_parsed <- get_afs(overlap_phred40_unique)
+
+
+overlap_phred40_unique_parsed |> group_by(Chrom) |> count()
 ```
 
 Check if all Variants in `overlap_phred40_unique` are unique: `r nrow(overlap_phred40_unique) == length(unique(overlap_phred40_unique$Ident))`
@@ -130,6 +137,8 @@ phred40_AC50[, -5]
 
 ### Variants with high AC / AF
 
+**WAS STILL WITH INCOMPLETE DATA**
+*Replace mastermind with litvar* [Link](https://www.ncbi.nlm.nih.gov/research/litvar2/)
 
 **3:9384551C\>T (rs149283084)**  
 `r print_snv_info(phred40_AC50, 1)`
@@ -191,11 +200,7 @@ overlap_stopgain <- process_caddscoring(fread("data/GRCh38_CADDv1.6_SNVs_STOP_GA
 
 overlap_stopgain_unique <- remove_duplicates(overlap_stopgain)
 
-overlap_stopgain_unique_parsed <- parse_gnomad(overlap_stopgain_unique)
-
-fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz") |> group_by(`#Chrom`) |> count() |> arrange(`#Chrom`)
-
-fread("data/GRCh38_CADDv1.6_SNVs_STOP_GAINED.gnomad-exome_overlap.tsv.gz") |> filter(`#Chrom`== "10")
+overlap_stopgain_unique_parsed <- get_afs(overlap_stopgain_unique)
 
 ```
 

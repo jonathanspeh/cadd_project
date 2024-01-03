@@ -8,6 +8,12 @@ remove_duplicates <- function(cadd_data, id = Ident, pos = relcDNApos) {
   }
 
 
+
+
+
+
+
+
 # Process Overlaps with gnomad
 process_caddscoring <- function(.data, cols = keep, autosomes_only = TRUE){
   processed <- .data |>
@@ -20,6 +26,8 @@ process_caddscoring <- function(.data, cols = keep, autosomes_only = TRUE){
 
 
 # Parse gnomad column
+# Can be used to get all gnomad annotations, however is quite slow and heavy on memory
+# Needs optimisation
 parse_gnomad <- function(gnomad_data, column = GnomAD_Exomes){
   gnomad_data |> 
     tidyr::separate_longer_delim({{ column }}, ";") |>
@@ -28,6 +36,22 @@ parse_gnomad <- function(gnomad_data, column = GnomAD_Exomes){
     tidyr::pivot_wider(names_from = key, values_from = value) |>
     utils::type.convert(as.is = TRUE)
   }
+
+# Gets AC, AN and AF of gnomad data
+# Faster and uses way less memory than parse_gnomad()
+get_afs <- function(gnomad_data) {
+  require(data.table)
+  require(dplyr)
+  gnomad_data <- as.data.table(gnomad_data)
+  gnomad_data <- cbind(gnomad_data[, !"GnomAD_Exomes"], gnomad_data[, tstrsplit(GnomAD_Exomes, split = ";")[1:3]])
+  gnomad_data <- mutate(gnomad_data, across(starts_with("V"), function(x) sub(".*=", "", x)))
+  colnames(gnomad_data)[which(colnames(gnomad_data)=="V1")] <- "AC"
+  colnames(gnomad_data)[which(colnames(gnomad_data)=="V2")] <- "AN"
+  colnames(gnomad_data)[which(colnames(gnomad_data)=="V3")] <- "AF"
+  gnomad_data <- utils::type.convert(gnomad_data, as.is = TRUE)
+  as_tibble(gnomad_data)
+}
+
 
 
 
