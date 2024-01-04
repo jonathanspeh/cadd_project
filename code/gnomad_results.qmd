@@ -1,0 +1,106 @@
+---
+title: "Gnomad Overlaps - Results"
+author: "Jonathan Speh"
+format:
+  html:
+    code-fold: true
+    code-tools: true
+    df-print: paged 
+    tbl-cap-location: top
+    code-overflow: wrap
+engine: knitr
+execute: 
+  cache: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+
+library(data.table)
+library(dplyr)
+options(scipen = 10000)
+```
+
+
+## Overlaps PHRED > 40 / GnomAD
+
+```{r}
+#| lable: describe-phred40
+#| tbl-cap: 
+#|    -   "Most variants where found in Coding Regions"
+#|    -   "Most variants are stopgains"
+overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv") |>
+  select()
+
+overlap_phred40|>
+  group_by(AnnoType) |> 
+  count() |> 
+  arrange(desc(n))
+
+overlap_phred40|>
+  group_by(Consequence) |> 
+  count() |> 
+  arrange(desc(n))
+
+
+overlap_phred40 |> 
+  ggplot(aes(x = PHRED)) +
+  geom_bar(stat = "count")
+
+```
+
+
+```{r}
+#| label: describe-afs
+#| tbl-cap: 
+#|    -   "Allele Counts"
+#|    -   "Variants with the highest allele frequency"
+#|    -   "Variants where the minor allele is the reference allele" 
+
+overlap_phred40 |> 
+  group_by(AC) |>
+  count() |>
+  arrange(desc(n))
+
+overlap_phred40 |> 
+  arrange(desc(AF)) |>
+  head(n = 10) |>
+  select(Chrom, Pos, Ref, Alt, Consequence, GeneName, PHRED, AC, AN, AF)
+
+overlap_phred40 |> 
+  filter(AF > 0.5) |>
+  select(Chrom, Pos, Ref, Alt, Consequence, GeneName, PHRED, AC, AN, AF)
+```
+
+Most (`r nrow(filter(overlap_phred40, AC == 1))`) of the variants in Gnomad where singletons (had an allele count of 1).
+`r nrow(filter(overlap_phred40, AC >= 500))` variats where observed at least 500 times in the gnomad DB and (`r nrow(filter(overlap_phred40, AC >= 1000))`) variants where seen at least 100 times. 
+
+Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where the minor allele is listed as reference. 
+
+```{r}
+
+phred40_genelist <- overlap_phred40 |> 
+  arrange(desc(PHRED)) |>
+  select(GeneName, PHRED) |>
+  unique()
+
+fwrite(phred40_genelist, "processed_data/phred40_genelist.csv")
+
+phred40_genelist_no_singletons <- overlap_phred40 |> 
+  filter(AC > 1) |>
+   arrange(desc(PHRED)) |>
+  select(GeneName, PHRED) |>
+  unique()
+
+fwrite(phred40_genelist_no_singletons, "processed_data/phred40_genelist_no_singletons.csv")
+
+length(unique(phred40_genelist_no_singletons$GeneName))
+
+
+
+```
+
+
+
+

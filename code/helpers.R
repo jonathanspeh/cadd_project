@@ -60,10 +60,11 @@ get_afs <- function(gnomad_data) {
 
 # Print SNV information
 print_snv_info <- function(data, row){
+  require(dplyr)
   data <- data <- data[row,]
   out <- data|>
-    mutate("Position" = paste0(Chrom, ":", Pos)) |>
-    dplyr::select(all_of(c("Position", "Ref", "Alt", "Allele Count" = "AC", 
+    dplyr::mutate("Position" = paste0(Chrom, ":", Pos)) |>
+    select(all_of(c("Position", "Ref", "Alt", "Allele Count" = "AC", 
                        "Allele Frequency" = "AF", "PHRED", "Gene" = "GeneName"))) |>
     t() |> data.frame() 
   
