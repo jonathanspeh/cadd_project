@@ -16,22 +16,25 @@ bibliography: references.bib
 
 ```{r}
 #| label: setup
+#| message: false
+#| cache: false
 
 library(data.table)
 library(dplyr)
+library(ggplot2)
 options(scipen = 10000)
+
+overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv")
 ```
 
-
-## Overlaps PHRED > 40 / GnomAD
+## Overlaps PHRED \> 40 / GnomAD
 
 ```{r}
-#| lable: describe-phred40
+#| label: tables-phred40
 #| tbl-cap: 
 #|    -   "Most variants where found in Coding Regions"
 #|    -   "Most variants are stopgains"
-overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv") |>
-  select()
+ 
 
 overlap_phred40|>
   group_by(AnnoType) |> 
@@ -43,13 +46,16 @@ overlap_phred40|>
   count() |> 
   arrange(desc(n))
 
+```
 
+```{r}
+#| label: histogram-phred40
+#| fig-cap: "Histogram of the PHRED scores"
 overlap_phred40 |> 
   ggplot(aes(x = PHRED)) +
   geom_bar(stat = "count")
 
 ```
-
 
 ```{r}
 #| label: describe-afs
@@ -73,12 +79,80 @@ overlap_phred40 |>
   select(Chrom, Pos, Ref, Alt, Consequence, GeneName, PHRED, AC, AN, AF)
 ```
 
-Most (`r nrow(filter(overlap_phred40, AC == 1))`) of the variants in Gnomad where singletons (had an allele count of 1).
-`r nrow(filter(overlap_phred40, AC >= 500))` variats where observed at least 500 times in the gnomad DB and (`r nrow(filter(overlap_phred40, AC >= 1000))`) variants where seen at least 100 times. 
+Most (`r nrow(filter(overlap_phred40, AC == 1))`) of the variants in Gnomad where singletons (had an allele count of 1). `r nrow(filter(overlap_phred40, AC >= 500))` variants where observed at least 500 times in the gnomad DB and `r nrow(filter(overlap_phred40, AC >= 1000))` variants where seen at least 1000 times.
 
-Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where the minor allele is listed as reference. 
+Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where the minor allele is listed as reference.
+
+### Variants with the highest Allele Frequencies
+
+#### 1-171208951-C-T (rs6661174)
+
+-   AF: `r arrange(overlap_phred40, desc(AF))$AF[1]`
+
+-   PHRED: `r arrange(overlap_phred40, desc(AF))$PHRED[1]`
+
+-   Gene: `r arrange(overlap_phred40, desc(AF))$GeneName[1]`
+
+-   Variant leads to Stopgain in FMO2 (Dimethylaniline monooxygenase \[N-oxide-forming\] 2)
+
+-   Marked as benign in Clinvar
+
+    **From @veeramah2008**
+
+-   All tested Europeans and Asians are homozygous for non-functional Variant (T - Allele)
+
+    -   have non-functional FMO2
+
+-   Functional ancestral allele (C - Allele, *FMO2\*1*) can be found in African-Americans (26%) and Hispanics (2 - 7%)
+
+    -   GnomAD - frequency of C-Allele: `r 1 - 0.8764`\` amongs african / african-american
+
+    -   All other Ancestry groups have AFs of close to 1 for T-Allele
+
+-   C\>T mutation is belived to have occured \~ 500 000 ya
+
+-   Carriers of ancenstral allele have a functional FMO2 which may be linked to
+
+    -   Pulmonary Toxicity upon thiourea exposure (used in industrial processes and several drugs)
+
+    -   altered Metabolism of ethionamide metabolism (a drug used in treatment of tbc)
+
+**From @mekonnen2017**
+
+-   Studied association of genetic polymorphisms in an ethiopian population with tbc
+
+-   The ancestral allele (functional FMO2) seems to be protective for active tbc and is not linked to adjacent high-tbc-risk alleles
+
+-   thiourea toxicity is unlikely to be responsible for low AF of ancestral allele - the compound has not had enough time to apply selective pressure
+
+-   Variant (C - Allele) seems to be at least benign, despite being predicted as likely deleterious by CADD
+
+-   High Phred likely due to cadds use of ancestral alleles as proxy-benign?
+
+-   
+
+#### 5-75669297-G-A (rs34358)
+
+-   AF: `r arrange(overlap_phred40, desc(AF))$AF[2]`
+
+-   PHRED: `r arrange(overlap_phred40, desc(AF))$PHRED[2]`
+
+-   Gene: `r arrange(overlap_phred40, desc(AF))$GeneName[2]`
+
+-   Variant leads to stop-gain in ANKDD1B
+
+-   A allele (Variant) is Major allele in all Ancestry groups except South Asian (0.4416) and East Asian (0.3526)
+
+**Diseases asssociations of the variant**
+
+-   Variant allele associated with Typ 2 Diabetes in GWAS and Diabetes, Hyperlipidemia and Hypercholesterolemia in PheWAS [@vujkovic2020]
+-   A - Allele (variant) associated with decreased risk for migraine without aura [@zhang2022]
+
+#### Continue Here
 
 ```{r}
+#| label: make-gene-lists
+#| 
 
 phred40_genelist <- overlap_phred40 |> 
   arrange(desc(PHRED)) |>
@@ -95,12 +169,30 @@ phred40_genelist_no_singletons <- overlap_phred40 |>
 
 fwrite(phred40_genelist_no_singletons, "processed_data/phred40_genelist_no_singletons.csv")
 
-length(unique(phred40_genelist_no_singletons$GeneName))
+
+```
+
+```{r}
+
+
+observed_stopgains <- fread("processed_data/overlap_stopgain_processed.csv")
+
+all_stopgains <- fread("processed_data/all_unique_cadd_snvs.csv")
+
+
+observed_stopgains |> 
+  mutate(phred40 = ifelse(PHRED > 40, TRUE, FALSE)) |>
+  ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
+  geom_density(alpha = 0.1)
+
+
+all_stopgains |> 
+  mutate(phred40 = ifelse(PHRED > 40, TRUE, FALSE)) |>
+  ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
+  geom_density(alpha = 0.1)
+
+
 
 
 
 ```
-
-
-
-

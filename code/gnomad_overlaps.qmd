@@ -269,8 +269,6 @@ all_stopgains <- process_caddscoring(all_stopgains,
                                      autosomes_only = TRUE)
 
 all_stopgains_unique <- remove_duplicates(all_stopgains) #Super slow..., rewrite with data.table?
-all_stopgains_unique <- all_stopgains_unique |> group_by(Ident) |> 
-  slice_sample(n = 1)
 
 fwrite(all_stopgains_unique, "processed_data/all_unique_cadd_snvs.csv")
 ```
