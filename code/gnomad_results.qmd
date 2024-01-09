@@ -17,14 +17,20 @@ bibliography: references.bib
 ```{r}
 #| label: setup
 #| message: false
+#| warning: false
 #| cache: false
 
 library(data.table)
 library(dplyr)
+library(tidyr)
+library(rrvgo)
+library(stringr)
 library(ggplot2)
+library(enrichR)
 options(scipen = 10000)
 
 overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv")
+source("helpers.R")
 ```
 
 ## Overlaps PHRED \> 40 / GnomAD
@@ -129,8 +135,6 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 
 -   High Phred likely due to cadds use of ancestral alleles as proxy-benign?
 
--   
-
 #### 5-75669297-G-A (rs34358)
 
 -   AF: `r arrange(overlap_phred40, desc(AF))$AF[2]`
@@ -148,7 +152,134 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 -   Variant allele associated with Typ 2 Diabetes in GWAS and Diabetes, Hyperlipidemia and Hypercholesterolemia in PheWAS [@vujkovic2020]
 -   A - Allele (variant) associated with decreased risk for migraine without aura [@zhang2022]
 
-#### Continue Here
+#### 1-54716627-T-A (rs1147990)
+
+-   AF: `r arrange(overlap_phred40, desc(AF))$AF[3]`
+
+-   PHRED: `r arrange(overlap_phred40, desc(AF))$PHRED[3]`
+
+-   Gene: `r arrange(overlap_phred40, desc(AF))$GeneName[3]`
+
+-   Variant (A - Allele) is major allele in all GnomAD ancestry groups
+
+    -   AF 0.5126 in NFE, 0.9779 in East Asian
+
+-   Variant leads to stop-gain in *MROH7-TTC4*
+
+    -   lncRNA gene - not protein coding
+    -   variant also leads to missense Variant in TTC4, clinical significance not known
+
+#### 7-21543345-G-T (rs2285943)
+
+-   AF: `r arrange(overlap_phred40, desc(AF))$AF[4]`
+
+-   PHRED: `r arrange(overlap_phred40, desc(AF))$PHRED[4]`
+
+-   Gene: `r arrange(overlap_phred40, desc(AF))$GeneName[4]`
+
+-   Variant (T-Allele) relatively common (AF \~ 0.5) in most ancestry groups, more rare in Amish, Admixed American and East Asian
+
+-   Leads to stopgain in DNAH11
+
+-   Reported as benign in Clinvar
+
+-   AR *DNAH11* LOF leads to Primary Ciliary Dyskinesia 7 (CILD7) [@bartoloni2002; @schwabe2008] but is "compatible with normal male fertility" [@schwabe2008]
+
+-   rs2285943 is however not reported as linked to CILD7
+
+#### 19-48703417-G-A (rs
+
+-   AF: `r arrange(overlap_phred40, desc(AF))$AF[5]`
+
+-   PHRED: `r arrange(overlap_phred40, desc(AF))$PHRED[5]`
+
+-   Gene: `r arrange(overlap_phred40, desc(AF))$GeneName[5]`
+
+-   FUT2 function affects secretor Phenotype
+
+    -   Carriers of functional reference Allele secrete AB0 Antigens in body fluids,
+
+### Continue here
+
+
+
+## Relative Stopgain positions
+
+```{r}
+#| label: prepare-plot-data
+
+observed_stopgains <- fread("processed_data/overlap_stopgain_processed.csv")
+
+all_stopgains <- fread("processed_data/all_unique_cadd_snvs.csv")
+
+
+
+observed_v_all <- tibble(relcDNApos = c(simulated_stopgain$relcDNApos, 
+                                          observed_stopgains$relcDNApos),
+                           PHRED = c(all_stopgains$PHRED, 
+                                     observed_stopgains$PHRED),
+                           flag = c(rep("simmulated", nrow(all_stopgains)),
+                                    rep("observed", nrow(observed_stopgains)))) 
+
+
+simulated_stopgain <- anti_join(all_stopgains[,c("Ident", "relcDNApos", "PHRED")],
+                                observed_stopgains[,c("Ident", "relcDNApos", "PHRED")])
+
+observed_v_simulated <- tibble(relcDNApos = c(simulated_stopgain$relcDNApos,
+                                              observed_stopgains$relcDNApos),
+                           PHRED = c(simulated_stopgain$PHRED, 
+                                     observed_stopgains$PHRED),
+                           flag = c(rep("simulated", nrow(simulated_stopgain)),
+                                    rep("observed", nrow(observed_stopgains)))) 
+```
+
+
+```{r}
+#| label: plot-rel-position
+#| fig-cap: 
+#|    -   "relative position of the observed vs simulated Stopgains with PHRED above and below 40"
+#|    -   "same data as before but facet and colours swapped"
+
+# observed_stopgains |> 
+#   mutate(phred40 = ifelse(PHRED >= 40,  "PHRED above 40", "PHRED below 40")) |>
+#   ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
+#   geom_density(alpha = 0.1)
+
+
+observed_v_simulated |> 
+  mutate(flag = factor(flag, levels = c("simulated", "observed")), 
+         phred40 = ifelse(PHRED >= 40, "above 40", "below 40")) |>
+  ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
+  geom_density(alpha = 0.1) +
+  facet_wrap(~flag) +
+  theme_minimal() +
+  labs(fill = "PHRED", colour = "PHRED")
+
+
+
+observed_v_simulated |>
+  mutate(phred40 = ifelse(PHRED >= 40, "PHRED above 40", "PHRED below 40")) |>
+  ggplot(aes(x = relcDNApos, colour = flag, fill = flag)) +
+  geom_density(alpha = 0.1) +
+  facet_wrap(~phred40)
+
+
+observed_v_simulated |> 
+  mutate(flag = factor(flag, levels = c("simulated", "observed")), 
+         phred40 = ifelse(PHRED >= 40, "above 40", "below 40")) |>
+  ggplot(aes(x = relcDNApos)) +
+  geom_density(alpha = 0.1) +
+  facet_wrap(~flag) +
+  theme_minimal() +
+  labs(fill = "PHRED", colour = "PHRED")
+
+
+```
+
+
+
+# Enrichment analysis
+
 
 ```{r}
 #| label: make-gene-lists
@@ -168,31 +299,93 @@ phred40_genelist_no_singletons <- overlap_phred40 |>
   unique()
 
 fwrite(phred40_genelist_no_singletons, "processed_data/phred40_genelist_no_singletons.csv")
+```
 
+
+```{r}
+#| label: run-enrichR-and-process
+
+#listEnrichrDbs()$libraryName[grepl("GO.*2023", listEnrichrDbs()$libraryName)]
+
+phred40_genelist_no_singletons <- fread("processed_data/phred40_genelist_no_singletons.csv")
+dbs <- c("GO_Biological_Process_2023", "GO_Cellular_Component_2023", "GO_Molecular_Function_2023")
+
+phred40_no_singletons_eneriched <- enrichr(phred40_genelist_no_singletons$GeneName,
+                                           dbs)
+
+fwrite(phred40_no_singletons_eneriched$GO_Biological_Process_2023, "processed_data/phred40_BP")
+fwrite(phred40_no_singletons_eneriched$GO_Molecular_Function_2023, "processed_data/phred40_MF")
+fwrite(phred40_no_singletons_eneriched$GO_Cellular_Component_2023, "processed_data/phred40_CC")
+
+```
+
+
+
+
+
+```{r}
+#| label: process-enriched
+
+phred40_BP <- phred40_no_singletons_eneriched$GO_Biological_Process_2023 |>
+  filter(Adjusted.P.value <= 0.05) |>
+  mutate(GO_ID = str_extract(Term, "GO:[0-9]*"),
+         Term = str_extract(Term, "[A-Za-z0-9 ]*")) 
+
+sim_mat_bp <- calculateSimMatrix(phred40_BP$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "BP",
+                   method = "Rel")
+
+dim(sim_mat_bp)
+
+
+scores_bp <- setNames(-log10(phred40_BP$Adjusted.P.value), phred40_BP$GO_ID)
+
+sim_mat_bp_reduced <- reduceSimMatrix(sim_mat_bp,
+                                      scores = scores_bp,
+                                      threshold = 0.7,
+
+                                      orgdb="org.Hs.eg.db")
+
+phred40_BP_reduced <- left_join(sim_mat_bp_reduced, phred40_BP, 
+                                by = c("go" = "GO_ID"), keep = TRUE)
+
+fwrite(sim_mat_bp, "processed_data/sim_map_bp.csv")
+fwrite(sim_mat_bp_reduced, "processed_data/sim_map_bp_reduced.csv")
 
 ```
 
 ```{r}
+#| label: plot-enrichment
+
+treemapPlot(sim_mat_bp_reduced, title = "Biological processes enriched in PHRED > 40")
 
 
-observed_stopgains <- fread("processed_data/overlap_stopgain_processed.csv")
-
-all_stopgains <- fread("processed_data/all_unique_cadd_snvs.csv")
-
-
-observed_stopgains |> 
-  mutate(phred40 = ifelse(PHRED > 40, TRUE, FALSE)) |>
-  ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
-  geom_density(alpha = 0.1)
+phred40_BP_reduced |> 
+  arrange(Adjusted.P.value) |>
+  head(n = 20) |>
+  ggplot(aes(x = reorder(Term, -Adjusted.P.value), y = Adjusted.P.value))+
+  geom_bar(stat = "identity")+
+  coord_flip()
 
 
-all_stopgains |> 
-  mutate(phred40 = ifelse(PHRED > 40, TRUE, FALSE)) |>
-  ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
-  geom_density(alpha = 0.1)
+phred40_BP_reduced |> 
+  rowwise() |>
+  mutate(ratio = eval(str2lang(Overlap))) |>
+  arrange(Adjusted.P.value) |> head(n = 20) |>
+  ggplot(aes(x = reorder(Term, Adjusted.P.value), y = ratio, fill = Adjusted.P.value)) +
+  geom_bar(stat = "identity") +
+  coord_flip()
+
 
 
 
 
 
 ```
+
+
+
+
+
+
