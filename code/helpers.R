@@ -72,10 +72,13 @@ print_snv_info <- function(data, row){
   out
   }
 
-
+# Process reults of enrichment analysis
 process_enrichR <- function(enriched){
   enriched |>
     filter(Adjusted.P.value <= 0.05) |> 
     mutate(GO_ID = str_extract(Term, "GO:[0-9]*"),
            Term = str_extract(Term, "[A-Za-z0-9 ]*")) 
 }
+
+
+

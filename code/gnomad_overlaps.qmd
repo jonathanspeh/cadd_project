@@ -148,12 +148,6 @@ overlap_phred40_unique_parsed |> filter(AF > 0.5)
 
 `r nrow(phred40_AC50)` Variants with a PHRED score above 40 and an allele count above 50 were found in the gnomad DB. These variants had an mean PHRED of `r mean(phred40_AC50$PHRED)`
 
-### Variants with high AC / AF
-
-**WAS STILL WITH INCOMPLETE DATA**
-*Replace mastermind with litvar* [Link](https://www.ncbi.nlm.nih.gov/research/litvar2/)
-
-
 
 ```{r}
 #| echo: false

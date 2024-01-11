@@ -8,11 +8,17 @@ format:
     df-print: paged 
     tbl-cap-location: top
     code-overflow: wrap
+  docx: 
+    toc: true
+  pdf:
+    toc: true
 engine: knitr
 execute: 
   cache: true
 bibliography: references.bib
 ---
+
+# Libraries
 
 ```{r}
 #| label: setup
@@ -23,17 +29,17 @@ bibliography: references.bib
 library(data.table)
 library(dplyr)
 library(tidyr)
-library(rrvgo)
 library(stringr)
 library(ggplot2)
+library(ggridges)
 library(enrichR)
-options(scipen = 10000)
+library(rrvgo)
+source("code/helpers.R")
 
-overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv")
-source("helpers.R")
+options(scipen = 10000)
 ```
 
-## Overlaps PHRED \> 40 / GnomAD
+# Overlaps PHRED \> 40 / GnomAD
 
 ```{r}
 #| label: tables-phred40
@@ -42,6 +48,7 @@ source("helpers.R")
 #|    -   "Most variants are stopgains"
  
 
+overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv")
 overlap_phred40|>
   group_by(AnnoType) |> 
   count() |> 
@@ -85,13 +92,13 @@ overlap_phred40 |>
   select(Chrom, Pos, Ref, Alt, Consequence, GeneName, PHRED, AC, AN, AF)
 ```
 
-Most (`r nrow(filter(overlap_phred40, AC == 1))`) of the variants in Gnomad where singletons (had an allele count of 1). `r nrow(filter(overlap_phred40, AC >= 500))` variants where observed at least 500 times in the gnomad DB and `r nrow(filter(overlap_phred40, AC >= 1000))` variants where seen at least 1000 times.
+Most (`r nrow(filter(overlap_phred40, AC == 1))`) of the variants in GnomAD where singletons (had an allele count of 1). `r nrow(filter(overlap_phred40, AC >= 500))` variants where observed at least 500 times in the GnomAD DB and `r nrow(filter(overlap_phred40, AC >= 1000))` variants where seen at least 1000 times.
 
 Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where the minor allele is listed as reference.
 
-### Variants with the highest Allele Frequencies
+## Variants with the highest Allele Frequencies
 
-#### 1-171208951-C-T (rs6661174)
+### 1-171208951-C-T (rs6661174)
 
 -   AF: `r arrange(overlap_phred40, desc(AF))$AF[1]`
 
@@ -99,9 +106,9 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 
 -   Gene: `r arrange(overlap_phred40, desc(AF))$GeneName[1]`
 
--   Variant leads to Stopgain in FMO2 (Dimethylaniline monooxygenase \[N-oxide-forming\] 2)
+-   Variant leads to Stop-gain in FMO2 (Dimethylaniline monooxygenase \[N-oxide-forming\] 2)
 
--   Marked as benign in Clinvar
+-   Marked as benign in ClinVar
 
     **From @veeramah2008**
 
@@ -111,13 +118,13 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 
 -   Functional ancestral allele (C - Allele, *FMO2\*1*) can be found in African-Americans (26%) and Hispanics (2 - 7%)
 
-    -   GnomAD - frequency of C-Allele: `r 1 - 0.8764`\` amongs african / african-american
+    -   GnomAD - frequency of C-Allele: `r 1 - 0.8764`\` amongst African / African-american
 
     -   All other Ancestry groups have AFs of close to 1 for T-Allele
 
--   C\>T mutation is belived to have occured \~ 500 000 ya
+-   C\>T mutation is believed to have occurred \~ 500 000 ya
 
--   Carriers of ancenstral allele have a functional FMO2 which may be linked to
+-   Carriers of ancestral allele have a functional FMO2 which may be linked to
 
     -   Pulmonary Toxicity upon thiourea exposure (used in industrial processes and several drugs)
 
@@ -125,7 +132,7 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 
 **From @mekonnen2017**
 
--   Studied association of genetic polymorphisms in an ethiopian population with tbc
+-   Studied association of genetic polymorphisms in an Ethiopian population with tbc
 
 -   The ancestral allele (functional FMO2) seems to be protective for active tbc and is not linked to adjacent high-tbc-risk alleles
 
@@ -133,9 +140,7 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 
 -   Variant (C - Allele) seems to be at least benign, despite being predicted as likely deleterious by CADD
 
--   High Phred likely due to cadds use of ancestral alleles as proxy-benign?
-
-#### 5-75669297-G-A (rs34358)
+### 5-75669297-G-A (rs34358)
 
 -   AF: `r arrange(overlap_phred40, desc(AF))$AF[2]`
 
@@ -147,12 +152,12 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 
 -   A allele (Variant) is Major allele in all Ancestry groups except South Asian (0.4416) and East Asian (0.3526)
 
-**Diseases asssociations of the variant**
+**Diseases associations of the variant**
 
--   Variant allele associated with Typ 2 Diabetes in GWAS and Diabetes, Hyperlipidemia and Hypercholesterolemia in PheWAS [@vujkovic2020]
+-   Variant allele associated with Type 2 Diabetes in GWAS and Diabetes, Hyperlipidaemia and Hypercholesterolemia in PheWAS [@vujkovic2020]
 -   A - Allele (variant) associated with decreased risk for migraine without aura [@zhang2022]
 
-#### 1-54716627-T-A (rs1147990)
+### 1-54716627-T-A (rs1147990)
 
 -   AF: `r arrange(overlap_phred40, desc(AF))$AF[3]`
 
@@ -169,7 +174,7 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
     -   lncRNA gene - not protein coding
     -   variant also leads to missense Variant in TTC4, clinical significance not known
 
-#### 7-21543345-G-T (rs2285943)
+### 7-21543345-G-T (rs2285943)
 
 -   AF: `r arrange(overlap_phred40, desc(AF))$AF[4]`
 
@@ -179,15 +184,15 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 
 -   Variant (T-Allele) relatively common (AF \~ 0.5) in most ancestry groups, more rare in Amish, Admixed American and East Asian
 
--   Leads to stopgain in DNAH11
+-   Leads to stop-gain in DNAH11
 
--   Reported as benign in Clinvar
+-   Reported as benign in ClinVar
 
 -   AR *DNAH11* LOF leads to Primary Ciliary Dyskinesia 7 (CILD7) [@bartoloni2002; @schwabe2008] but is "compatible with normal male fertility" [@schwabe2008]
 
 -   rs2285943 is however not reported as linked to CILD7
 
-#### 19-48703417-G-A (rs
+### 19-48703417-G-A (rs601338)
 
 -   AF: `r arrange(overlap_phred40, desc(AF))$AF[5]`
 
@@ -198,88 +203,12 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 -   FUT2 function affects secretor Phenotype
 
     -   Carriers of functional reference Allele secrete AB0 Antigens in body fluids,
-
-### Continue here
-
-
-
-## Relative Stopgain positions
-
-```{r}
-#| label: prepare-plot-data
-
-observed_stopgains <- fread("processed_data/overlap_stopgain_processed.csv")
-
-all_stopgains <- fread("processed_data/all_unique_cadd_snvs.csv")
-
-
-
-observed_v_all <- tibble(relcDNApos = c(simulated_stopgain$relcDNApos, 
-                                          observed_stopgains$relcDNApos),
-                           PHRED = c(all_stopgains$PHRED, 
-                                     observed_stopgains$PHRED),
-                           flag = c(rep("simmulated", nrow(all_stopgains)),
-                                    rep("observed", nrow(observed_stopgains)))) 
-
-
-simulated_stopgain <- anti_join(all_stopgains[,c("Ident", "relcDNApos", "PHRED")],
-                                observed_stopgains[,c("Ident", "relcDNApos", "PHRED")])
-
-observed_v_simulated <- tibble(relcDNApos = c(simulated_stopgain$relcDNApos,
-                                              observed_stopgains$relcDNApos),
-                           PHRED = c(simulated_stopgain$PHRED, 
-                                     observed_stopgains$PHRED),
-                           flag = c(rep("simulated", nrow(simulated_stopgain)),
-                                    rep("observed", nrow(observed_stopgains)))) 
-```
-
-
-```{r}
-#| label: plot-rel-position
-#| fig-cap: 
-#|    -   "relative position of the observed vs simulated Stopgains with PHRED above and below 40"
-#|    -   "same data as before but facet and colours swapped"
-
-# observed_stopgains |> 
-#   mutate(phred40 = ifelse(PHRED >= 40,  "PHRED above 40", "PHRED below 40")) |>
-#   ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
-#   geom_density(alpha = 0.1)
-
-
-observed_v_simulated |> 
-  mutate(flag = factor(flag, levels = c("simulated", "observed")), 
-         phred40 = ifelse(PHRED >= 40, "above 40", "below 40")) |>
-  ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
-  geom_density(alpha = 0.1) +
-  facet_wrap(~flag) +
-  theme_minimal() +
-  labs(fill = "PHRED", colour = "PHRED")
-
-
-
-observed_v_simulated |>
-  mutate(phred40 = ifelse(PHRED >= 40, "PHRED above 40", "PHRED below 40")) |>
-  ggplot(aes(x = relcDNApos, colour = flag, fill = flag)) +
-  geom_density(alpha = 0.1) +
-  facet_wrap(~phred40)
-
-
-observed_v_simulated |> 
-  mutate(flag = factor(flag, levels = c("simulated", "observed")), 
-         phred40 = ifelse(PHRED >= 40, "above 40", "below 40")) |>
-  ggplot(aes(x = relcDNApos)) +
-  geom_density(alpha = 0.1) +
-  facet_wrap(~flag) +
-  theme_minimal() +
-  labs(fill = "PHRED", colour = "PHRED")
-
-
-```
-
-
+    -   Secretor PT has associations with
+        -   ABO haemolytic disease in the newborn (Secretor Mother increases risk for B infants) [@krog2023]
+        -   enterotoxic *E. coli* infection (non-secretors have increased risk for symptomatic ETEC) [@mottram2017]
+        -   Gut microbiome [@thorman2023; @wacklin2011]
 
 # Enrichment analysis
-
 
 ```{r}
 #| label: make-gene-lists
@@ -301,7 +230,6 @@ phred40_genelist_no_singletons <- overlap_phred40 |>
 fwrite(phred40_genelist_no_singletons, "processed_data/phred40_genelist_no_singletons.csv")
 ```
 
-
 ```{r}
 #| label: run-enrichR-and-process
 
@@ -319,73 +247,206 @@ fwrite(phred40_no_singletons_eneriched$GO_Cellular_Component_2023, "processed_da
 
 ```
 
-
-
-
-
 ```{r}
 #| label: process-enriched
+#| message: false
 
-phred40_BP <- phred40_no_singletons_eneriched$GO_Biological_Process_2023 |>
-  filter(Adjusted.P.value <= 0.05) |>
-  mutate(GO_ID = str_extract(Term, "GO:[0-9]*"),
-         Term = str_extract(Term, "[A-Za-z0-9 ]*")) 
+phred40_BP <- process_enrichR(phred40_no_singletons_eneriched$GO_Biological_Process_2023)
+phred40_MF <- process_enrichR(phred40_no_singletons_eneriched$GO_Molecular_Function_2023)
+phred40_CC <- process_enrichR(phred40_no_singletons_eneriched$GO_Cellular_Component_2023)
 
-sim_mat_bp <- calculateSimMatrix(phred40_BP$GO_ID,
+sim_mat_BP <- calculateSimMatrix(phred40_BP$GO_ID,
                    orgdb="org.Hs.eg.db",
                    ont = "BP",
                    method = "Rel")
 
-dim(sim_mat_bp)
+sim_mat_MF <- calculateSimMatrix(phred40_MF$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "MF",
+                   method = "Rel")
+
+sim_mat_CC <- calculateSimMatrix(phred40_CC$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "CC",
+                   method = "Rel")
 
 
-scores_bp <- setNames(-log10(phred40_BP$Adjusted.P.value), phred40_BP$GO_ID)
+scores_BP <- setNames(-log10(phred40_BP$Adjusted.P.value), phred40_BP$GO_ID)
+scores_MF <- setNames(-log10(phred40_MF$Adjusted.P.value), phred40_MF$GO_ID)
+scores_CC <- setNames(-log10(phred40_CC$Adjusted.P.value), phred40_CC$GO_ID)
 
-sim_mat_bp_reduced <- reduceSimMatrix(sim_mat_bp,
-                                      scores = scores_bp,
+
+
+sim_mat_BP_reduced <- reduceSimMatrix(sim_mat_BP,
+                                      scores = scores_BP,
                                       threshold = 0.7,
-
+                                      orgdb="org.Hs.eg.db")
+sim_mat_MF_reduced <- reduceSimMatrix(sim_mat_MF,
+                                      scores = scores_MF,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+sim_mat_CC_reduced <- reduceSimMatrix(sim_mat_CC,
+                                      scores = scores_CC,
+                                      threshold = 0.7,
                                       orgdb="org.Hs.eg.db")
 
-phred40_BP_reduced <- left_join(sim_mat_bp_reduced, phred40_BP, 
+
+
+phred40_BP_reduced <- left_join(sim_mat_BP_reduced, phred40_BP, 
+                                by = c("go" = "GO_ID"), keep = TRUE)
+phred40_MF_reduced <- left_join(sim_mat_MF_reduced, phred40_MF, 
+                                by = c("go" = "GO_ID"), keep = TRUE)
+phred40_CC_reduced <- left_join(sim_mat_CC_reduced, phred40_CC, 
                                 by = c("go" = "GO_ID"), keep = TRUE)
 
-fwrite(sim_mat_bp, "processed_data/sim_map_bp.csv")
-fwrite(sim_mat_bp_reduced, "processed_data/sim_map_bp_reduced.csv")
+fwrite(sim_mat_BP, "processed_data/sim_map_BP.csv")
+fwrite(sim_mat_BP_reduced, "processed_data/sim_map_BP_reduced.csv")
+fwrite(sim_mat_MF, "processed_data/sim_map_MF.csv")
+fwrite(sim_mat_MF_reduced, "processed_data/sim_map_MF_reduced.csv")
+fwrite(sim_mat_CC, "processed_data/sim_map_CC.csv")
+fwrite(sim_mat_CC_reduced, "processed_data/sim_map_CC_reduced.csv")
 
 ```
 
 ```{r}
 #| label: plot-enrichment
 
-treemapPlot(sim_mat_bp_reduced, title = "Biological processes enriched in PHRED > 40")
+treemapPlot(sim_mat_BP_reduced, title = "Biological Processes enriched in PHRED > 40 - Singeltons excluded")
+treemapPlot(sim_mat_MF_reduced, title = "Molecular Functions enriched in PHRED > 40 - Singeltons excluded")
+treemapPlot(sim_mat_CC_reduced, title = "Cellular Component enriched in PHRED > 40 - Singeltons excluded")
+
+```
+
+```{r}
+#| label: enrichment-with-singletons
+#| eval: false
+
+phred40_all_enriched <- enrichr(phred40_genelist$GeneName, dbs)
+
+phred40_all_BP <- process_enrichR(phred40_all_enriched$GO_Biological_Process_2023)
+phred40_all_MF <- process_enrichR(phred40_all_enriched$GO_Molecular_Function_2023)
+phred40_all_CC <- process_enrichR(phred40_all_enriched$GO_Cellular_Component_2023)
+
+sim_mat_all_BP <- calculateSimMatrix(phred40_all_BP$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "BP",
+                   method = "Rel")
+
+sim_mat_all_MF <- calculateSimMatrix(phred40_all_MF$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "MF",
+                   method = "Rel")
+
+sim_mat_all_CC <- calculateSimMatrix(phred40_all_CC$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "CC",
+                   method = "Rel")
+
+scores_all_BP <- setNames(-log10(phred40_all_BP$Adjusted.P.value), phred40_all_BP$GO_ID)
+scores_all_MF <- setNames(-log10(phred40_all_MF$Adjusted.P.value), phred40_all_MF$GO_ID)
+scores_all_CC <- setNames(-log10(phred40_all_CC$Adjusted.P.value), phred40_all_CC$GO_ID)
+
+sim_mat_BP_all_reduced <- reduceSimMatrix(sim_mat_all_BP,
+                                      scores = scores_all_BP,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+sim_mat_MF_all_reduced <- reduceSimMatrix(sim_mat_all_MF,
+                                      scores = scores_all_MF,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+sim_mat_CC_all_reduced <- reduceSimMatrix(sim_mat_all_CC,
+                                      scores = scores_all_CC,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+
+phred40_BP_all_reduced <- left_join(sim_mat_BP_all_reduced, phred40_all_BP, 
+                                by = c("go" = "GO_ID"), keep = TRUE)
+phred40_MF_all_reduced <- left_join(sim_mat_MF_all_reduced, phred40_all_MF, 
+                                by = c("go" = "GO_ID"), keep = TRUE)
+phred40_CC_all_reduced <- left_join(sim_mat_CC_all_reduced, phred40_all_CC, 
+                                by = c("go" = "GO_ID"), keep = TRUE)
+
+treemapPlot(sim_mat_BP_all_reduced, title = "Biological processes enriched in PHRED > 40 - all")
+treemapPlot(sim_mat_MF_all_reduced, title = "Molecular functions enriched in PHRED > 40 - all")
+treemapPlot(sim_mat_CC_all_reduced, title = "cellular Component enriched in PHRED > 40 - all")
+
+```
+
+# Relative Position of observed and simulated SNVs
+
+```{r}
+#| label: prepare-plot-data
+
+observed_stopgains <- fread("processed_data/overlap_stopgain_processed.csv")
+
+all_stopgains <- fread("processed_data/all_unique_cadd_snvs.csv")
 
 
-phred40_BP_reduced |> 
-  arrange(Adjusted.P.value) |>
-  head(n = 20) |>
-  ggplot(aes(x = reorder(Term, -Adjusted.P.value), y = Adjusted.P.value))+
-  geom_bar(stat = "identity")+
-  coord_flip()
+simulated_stopgain <- anti_join(all_stopgains[,c("Ident", "relcDNApos", "PHRED")],
+                                observed_stopgains[,c("Ident", "relcDNApos", "PHRED")],
+                                by = join_by(Ident, relcDNApos, PHRED))
 
-
-phred40_BP_reduced |> 
-  rowwise() |>
-  mutate(ratio = eval(str2lang(Overlap))) |>
-  arrange(Adjusted.P.value) |> head(n = 20) |>
-  ggplot(aes(x = reorder(Term, Adjusted.P.value), y = ratio, fill = Adjusted.P.value)) +
-  geom_bar(stat = "identity") +
-  coord_flip()
+observed_v_all <- tibble(relcDNApos = c(all_stopgains$relcDNApos, 
+                                          observed_stopgains$relcDNApos),
+                           PHRED = c(all_stopgains$PHRED, 
+                                     observed_stopgains$PHRED),
+                           flag = c(rep("all", nrow(all_stopgains)),
+                                    rep("observed", nrow(observed_stopgains)))) 
 
 
 
+observed_v_simulated <- tibble(relcDNApos = c(simulated_stopgain$relcDNApos,
+                                              observed_stopgains$relcDNApos),
+                           PHRED = c(simulated_stopgain$PHRED, 
+                                     observed_stopgains$PHRED),
+                           flag = c(rep("simulated", nrow(simulated_stopgain)),
+                                    rep("observed", nrow(observed_stopgains)))) 
+```
 
+```{r}
+#| label: plot-rel-position
+#| fig-cap: 
+#|    -   "Stopgains that are predicted more harmless tend to be located earlier in the genes"
+#|    -   "relative position of the observed vs simulated Stopgains with PHRED above and below 40"
+
+# observed_stopgains |> 
+#   mutate(phred40 = ifelse(PHRED >= 40,  "PHRED above 40", "PHRED below 40")) |>
+#   ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
+#   geom_density(alpha = 0.1)
+
+observed_v_simulated |>
+  mutate(phred_bin = case_when(PHRED < 20 ~ "0-20",
+                               PHRED < 40 ~ "20-40",
+                               PHRED < 60 ~ "40-60",
+                               PHRED < 80 ~ "60-80",
+                               TRUE ~ "80-100"),
+         flag = factor(flag, levels = c("simulated", "observed"))) |>
+  ggplot(aes(x = relcDNApos, y = phred_bin)) +
+  geom_density_ridges_gradient() 
+
+
+# observed_v_simulated |> 
+#   mutate(flag = factor(flag, levels = c("simulated", "observed")), 
+#          phred40 = ifelse(PHRED >= 40, "above 40", "below 40")) |>
+#   ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
+#   geom_density(alpha = 0.1) +
+#   facet_wrap(~flag) +
+#   theme_minimal() +
+#   labs(fill = "PHRED", colour = "PHRED")
+
+
+observed_v_simulated |>
+  mutate(phred40 = ifelse(PHRED < 40, "PHRED below 40", "PHRED above 40"),
+         phred40 = factor(phred40, levels = c("PHRED below 40", 
+                                              "PHRED above 40"))) |>
+  ggplot(aes(x = relcDNApos, colour = flag, fill = flag)) +
+  geom_density(alpha = 0.1) +
+  facet_wrap(~phred40) +
+  theme_minimal()
 
 
 ```
 
-
-
-
-
-
+-   SNVs with lower PHRED are located earlier in the gene (on the cDNA)
+-   Observed SNVs with phred \< 40 show a plateau in the third quarter
+-   Observed SNVS with phred \> 40 show plateau in second quarter
