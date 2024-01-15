@@ -1,0 +1,326 @@
+---
+title: "GO-Enrichment Analysis"
+author: "Jonathan Speh"
+format:
+  html:
+    code-fold: true
+    code-tools: true
+    df-print: paged 
+    tbl-cap-location: top
+    code-overflow: wrap
+    self-contained: true
+engine: knitr
+execute: 
+  cache: true
+  output: false
+bibliography: references.bib
+---
+
+# Libraries
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(enrichR)
+library(rrvgo)
+library(ggplot2)
+source("code/helpers.R")
+
+options(scipen = 10000)
+```
+
+# GO - Enrichment analysis
+
+```{r}
+#| label: prepare-observed
+#| message: false
+
+observed_stopgains <-  fread("processed_data/overlap_stopgain_unique_parsed.csv")
+observed_stopgains_phred40 <- observed_stopgains |> 
+  filter(PHRED >= 40, 
+         AC > 1) # TODO: try without removing singletons?
+
+genelist_observed <- unique(observed_stopgains_phred40$GeneName)
+
+dbs <- c("GO_Biological_Process_2023", "GO_Cellular_Component_2023", "GO_Molecular_Function_2023")
+
+enriched_observed <- enrichr(unique(genelist_observed), dbs)
+
+observed_BP <- process_enrichR(enriched_observed$GO_Biological_Process_2023)
+observed_MF <- process_enrichR(enriched_observed$GO_Molecular_Function_2023)
+observed_CC <- process_enrichR(enriched_observed$GO_Cellular_Component_2023)
+
+observed_sim_mat_BP <- calculateSimMatrix(observed_BP$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "BP",
+                   method = "Rel")
+
+observed_sim_mat_MF <- calculateSimMatrix(observed_MF$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "MF",
+                   method = "Rel")
+
+observed_sim_mat_CC <- calculateSimMatrix(observed_CC$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "CC",
+                   method = "Rel")
+
+
+observed_scores_BP <- setNames(-log10(observed_BP$Adjusted.P.value), observed_BP$GO_ID)
+observed_scores_MF <- setNames(-log10(observed_MF$Adjusted.P.value), observed_MF$GO_ID)
+observed_scores_CC <- setNames(-log10(observed_CC$Adjusted.P.value), observed_CC$GO_ID)
+
+
+
+observed_sim_mat_BP_reduced <- reduceSimMatrix(observed_sim_mat_BP,
+                                      scores = observed_scores_BP,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+observed_sim_mat_MF_reduced <- reduceSimMatrix(observed_sim_mat_MF,
+                                      scores = observed_scores_MF,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+observed_sim_mat_CC_reduced <- reduceSimMatrix(observed_sim_mat_CC,
+                                      scores = observed_scores_CC,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+
+
+
+```
+
+```{r}
+#| label: prepare-simulated
+#| message: false
+
+all_stopgains <-  fread("processed_data/all_unique_cadd_snvs.csv")
+simulated_stopgains <- anti_join(all_stopgains[,c("Ident", "relcDNApos", "PHRED", "GeneName")],
+                                observed_stopgains[,c("Ident", "relcDNApos", "PHRED",  "GeneName")],
+                                by = join_by(Ident, relcDNApos, PHRED))
+
+simulated_stopgains_phred40 <- simulated_stopgains |> filter(PHRED >= 40)
+
+genelist_simulated <- unique(simulated_stopgains_phred40$GeneName)
+
+dbs <- c("GO_Biological_Process_2023", "GO_Cellular_Component_2023", "GO_Molecular_Function_2023")
+
+enriched_simulated <- enrichr(unique(genelist_simulated), dbs)
+
+simulated_BP <- process_enrichR(enriched_simulated$GO_Biological_Process_2023)
+simulated_MF <- process_enrichR(enriched_simulated$GO_Molecular_Function_2023)
+simulated_CC <- process_enrichR(enriched_simulated$GO_Cellular_Component_2023)
+
+simulated_sim_mat_BP <- calculateSimMatrix(simulated_BP$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "BP",
+                   method = "Rel")
+
+simulated_sim_mat_MF <- calculateSimMatrix(simulated_MF$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "MF",
+                   method = "Rel")
+
+simulated_sim_mat_CC <- calculateSimMatrix(simulated_CC$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "CC",
+                   method = "Rel")
+
+
+simulated_scores_BP <- setNames(-log10(simulated_BP$Adjusted.P.value), simulated_BP$GO_ID)
+simulated_scores_MF <- setNames(-log10(simulated_MF$Adjusted.P.value), simulated_MF$GO_ID)
+simulated_scores_CC <- setNames(-log10(simulated_CC$Adjusted.P.value), simulated_CC$GO_ID)
+
+
+
+simulated_sim_mat_BP_reduced <- reduceSimMatrix(simulated_sim_mat_BP,
+                                      scores = simulated_scores_BP,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+simulated_sim_mat_MF_reduced <- reduceSimMatrix(simulated_sim_mat_MF,
+                                      scores = simulated_scores_MF,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+simulated_sim_mat_CC_reduced <- reduceSimMatrix(simulated_sim_mat_CC,
+                                      scores = simulated_scores_CC,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+
+
+```
+
+```{r}
+#| label: plot-ea-bp
+#| output: true
+#| message: false
+#| layout-ncol: 2
+#| fig-cap-location: top
+#| fig-cap: "Biological Process"
+
+
+treemapPlot(observed_sim_mat_BP_reduced, title = "Observed")
+treemapPlot(simulated_sim_mat_BP_reduced, title = "Simulated")
+```
+
+-   The gene list from the simulated SNVs (with phred \> 40) that where not observed was enriched for more regulatory functions, including regulation of cell cycle and protein biosynthesis
+-   The gene list form the observed SNVs (with phred \> 40) is enriched for metabolic processes, cation transport and tissue and cell morphology
+
+```{r}
+#| label: plot-ea-cc
+#| output: true
+#| message: false
+#| layout-ncol: 2
+#| fig-cap-location: top
+#| fig-cap: "Cellular Component"
+
+treemapPlot(observed_sim_mat_CC_reduced, title = "Observed")
+treemapPlot(simulated_sim_mat_CC_reduced, title = "Simulated")
+```
+
+```{r}
+#| label: plot-ea-mf
+#| output: true
+#| message: false
+#| layout-ncol: 2
+#| fig-cap-location: top
+#| fig-cap: "Molecular Function"
+
+treemapPlot(observed_sim_mat_MF_reduced, title = "Observed")
+treemapPlot(simulated_sim_mat_MF_reduced, title = "Simulated")
+```
+
+# Phenotype enrichment analysis
+
+-   EA of genelists from simulated stopgains, singletons, and stopgains that where observerd more than once using the Mammalian Phenotype Ontology [@smith2012]
+-   MP is however based on mouse data ([mouse genome informatics database](https://www.informatics.jax.org/))
+
+```{r}
+#| label: phenotype-enrichment
+
+dbs <- c("MGI_Mammalian_Phenotype_Level_4_2021")
+
+
+genelist_singleton <- observed_stopgains |> filter(PHRED >= 40, 
+                                                        AC == 1)
+
+genelist_singleton <- unique(genelist_singleton$GeneName)
+
+
+genelist_non_singleton <- observed_stopgains |> filter(PHRED >= 40, 
+                                                        AC > 1)
+genelist_non_singleton <- unique(genelist_non_singleton$GeneName)
+
+
+singleton_enriched<- enrichr(genelist_singleton, dbs)
+non_singleton_enriched <- enrichr(genelist_non_singleton, dbs)
+simulated_enriched <- enrichr(genelist_simulated, dbs)
+```
+
+```{r}
+#| label: proc-pte
+#| tbl-cap: 
+#|    -   "Phenotype enrichment of genelist from Simulated SNVs"
+#|    -   "Phenotype enrichment of genelist from Singletons"
+#|    -   "Phenotype enrichment of genelist from non-singleton variants"
+
+singleton_enriched_sig <- singleton_enriched$MGI_Mammalian_Phenotype_Level_4_2021|>
+  filter(Adjusted.P.value <= 0.05)
+
+non_singleton_enriched_sig <- non_singleton_enriched$MGI_Mammalian_Phenotype_Level_4_2021|>
+  filter(Adjusted.P.value <= 0.05) 
+
+simulated_enriched_sig <- simulated_enriched$MGI_Mammalian_Phenotype_Level_4_2021|>
+  filter(Adjusted.P.value <= 0.05) 
+
+
+simulated_enriched_sig |> arrange(Adjusted.P.value)
+singleton_enriched_sig |> arrange(Adjusted.P.value)
+non_singleton_enriched_sig |> arrange(Adjusted.P.value)
+```
+
+```{r}
+#| label: plot-pte-facet
+#| output: true
+
+n = 10
+
+pt_enrichment <- rbind(slice_min(simulated_enriched_sig, Adjusted.P.value, n = n, with_ties = FALSE),
+      slice_min(singleton_enriched_sig, Adjusted.P.value, n = n, with_ties = FALSE),
+      slice_min(non_singleton_enriched_sig, Adjusted.P.value, n = n, with_ties = FALSE)) |>
+  mutate(flag = factor(rep(c("simulated", "singleton", "non-singleton"), each = n),
+                       levels = c("simulated", "singleton", "non-singleton"))) |>
+  rowwise() |>
+  mutate(Overlap = eval(parse(text = Overlap))) |>
+  separate_wider_delim(Term, "MP:", names = c("Term", "ID"))
+  
+
+
+# pt_enrichment |>
+#   ggplot(aes(x = reorder(Term, Overlap), y = Overlap, fill = Adjusted.P.value)) +
+#   geom_bar(stat = "identity") +
+#   coord_flip() +
+#   facet_wrap(~flag) + 
+#   scale_fill_gradient(low = "blue", high = "red") +
+#   scale_y_continuous(labels = c(0, 0.25 , 0.5, 0.75, 1)) +
+#   theme(axis.title.y = element_blank())
+  
+pt_enrichment |>
+  mutate(log10_P = log10(Adjusted.P.value)) |>
+  ggplot(aes(x = reorder(Term, -log10_P), y = log10_P, fill = Overlap)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  facet_wrap(~flag, scales = "free_x") + 
+  scale_fill_gradient(low = "blue", high = "red") +
+  scale_y_reverse() +
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_text("log10 P-Value" ))
+
+
+
+```
+
+-   Gene lists from simulated SNVs and Singletons are enriched for more "lethal" phenotypes than the gene list from non-singleton SNVs
+
+```{r}
+#| label: plot-pte-individual
+#| eval: false
+#| fig-cap: 
+#|    -   "Simulated"
+#|    -   "Singletons"
+#|    -   "Non-Singletons"
+#| fig-cap-location: top
+
+
+simulated_enriched_sig |> arrange(Adjusted.P.value) |>
+  head(n = 20) |>
+  rowwise() |>
+  mutate(Overlap = eval(parse(text = Overlap))) |>
+  separate_wider_delim(Term, "MP:", names = c("Term", "ID")) |>
+  ggplot(aes(x = reorder(Term, Adjusted.P.value), y = Overlap, fill = Adjusted.P.value)) +
+  geom_bar(stat = "identity") +
+  coord_flip() 
+
+singleton_enriched_sig |> arrange(Adjusted.P.value) |>
+  head(n = 20) |>
+  rowwise() |>
+  mutate(Overlap = eval(parse(text = Overlap))) |>
+  separate_wider_delim(Term, "MP:", names = c("Term", "ID")) |>
+  ggplot(aes(x = reorder(Term, Adjusted.P.value), y = Overlap, fill = Adjusted.P.value)) +
+  geom_bar(stat = "identity") +
+  coord_flip() 
+
+non_singleton_enriched_sig |> arrange(Adjusted.P.value) |>
+  head(n = 20) |>
+  rowwise() |>
+  mutate(Overlap = eval(parse(text = Overlap))) |>
+  separate_wider_delim(Term, "MP:", names = c("Term", "ID")) |>
+  ggplot(aes(x = reorder(Term, Adjusted.P.value), y = Overlap, fill = Adjusted.P.value)) +
+  geom_bar(stat = "identity") +
+  coord_flip() 
+
+
+```

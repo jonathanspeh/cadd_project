@@ -8,10 +8,12 @@ format:
     df-print: paged 
     tbl-cap-location: top
     code-overflow: wrap
+    self-contained: true
   docx: 
     toc: true
   pdf:
     toc: true
+    df-print: kable
 engine: knitr
 execute: 
   cache: true
@@ -238,12 +240,12 @@ fwrite(phred40_genelist_no_singletons, "processed_data/phred40_genelist_no_singl
 phred40_genelist_no_singletons <- fread("processed_data/phred40_genelist_no_singletons.csv")
 dbs <- c("GO_Biological_Process_2023", "GO_Cellular_Component_2023", "GO_Molecular_Function_2023")
 
-phred40_no_singletons_eneriched <- enrichr(phred40_genelist_no_singletons$GeneName,
+phred40_no_singletons_enriched <- enrichr(unique(phred40_genelist_no_singletons$GeneName),
                                            dbs)
 
-fwrite(phred40_no_singletons_eneriched$GO_Biological_Process_2023, "processed_data/phred40_BP")
-fwrite(phred40_no_singletons_eneriched$GO_Molecular_Function_2023, "processed_data/phred40_MF")
-fwrite(phred40_no_singletons_eneriched$GO_Cellular_Component_2023, "processed_data/phred40_CC")
+fwrite(phred40_no_singletons_enriched$GO_Biological_Process_2023, "processed_data/phred40_BP")
+fwrite(phred40_no_singletons_enriched$GO_Molecular_Function_2023, "processed_data/phred40_MF")
+fwrite(phred40_no_singletons_enriched$GO_Cellular_Component_2023, "processed_data/phred40_CC")
 
 ```
 
@@ -251,9 +253,9 @@ fwrite(phred40_no_singletons_eneriched$GO_Cellular_Component_2023, "processed_da
 #| label: process-enriched
 #| message: false
 
-phred40_BP <- process_enrichR(phred40_no_singletons_eneriched$GO_Biological_Process_2023)
-phred40_MF <- process_enrichR(phred40_no_singletons_eneriched$GO_Molecular_Function_2023)
-phred40_CC <- process_enrichR(phred40_no_singletons_eneriched$GO_Cellular_Component_2023)
+phred40_BP <- process_enrichR(phred40_no_singletons_enriched$GO_Biological_Process_2023)
+phred40_MF <- process_enrichR(phred40_no_singletons_enriched$GO_Molecular_Function_2023)
+phred40_CC <- process_enrichR(phred40_no_singletons_enriched$GO_Cellular_Component_2023)
 
 sim_mat_BP <- calculateSimMatrix(phred40_BP$GO_ID,
                    orgdb="org.Hs.eg.db",
@@ -316,6 +318,90 @@ treemapPlot(sim_mat_MF_reduced, title = "Molecular Functions enriched in PHRED >
 treemapPlot(sim_mat_CC_reduced, title = "Cellular Component enriched in PHRED > 40 - Singeltons excluded")
 
 ```
+
+
+
+
+## Add here: GO EA of Phred > 40, not observed Stopgains
+
+```{r}
+#| label:  enrich-simulated-stopgains
+
+observed_stopgains <- fread("processed_data/overlap_stopgain_processed.csv")
+all_stopgains <- fread("processed_data/all_unique_cadd_snvs.csv")
+
+
+simulated_stopgain <- anti_join(all_stopgains[,c("Ident", "relcDNApos", "PHRED", "GeneName")],
+                                observed_stopgains[,c("Ident", "relcDNApos", "PHRED",  "GeneName")],
+                                by = join_by(Ident, relcDNApos, PHRED))
+
+simulated_genelist <- simulated_stopgain |> filter(PHRED > 40)
+
+
+simulated_enriched <- enrichr(unique(simulated_genelist$GeneName), dbs)
+
+
+simulated_BP <- process_enrichR(simulated_enriched$GO_Biological_Process_2023)
+simulated_MF <- process_enrichR(simulated_enriched$GO_Molecular_Function_2023)
+simulated_CC <- process_enrichR(simulated_enriched$GO_Cellular_Component_2023)
+
+sim_mat_simulated_BP <- calculateSimMatrix(simulated_BP$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "BP",
+                   method = "Rel")
+
+sim_mat_simulated_MF <- calculateSimMatrix(simulated_MF$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "MF",
+                   method = "Rel")
+
+sim_mat_simulated_CC <- calculateSimMatrix(simulated_CC$GO_ID,
+                   orgdb="org.Hs.eg.db",
+                   ont = "CC",
+                   method = "Rel")
+
+scores_simulated_BP <- setNames(-log10(simulated_BP$Adjusted.P.value), simulated_BP$GO_ID)
+scores_simulated_MF <- setNames(-log10(simulated_MF$Adjusted.P.value), simulated_MF$GO_ID)
+scores_simulated_CC <- setNames(-log10(simulated_CC$Adjusted.P.value), simulated_CC$GO_ID)
+
+
+
+sim_mat_simulated_BP_reduced <- reduceSimMatrix(sim_mat_simulated_BP,
+                                      scores = scores_simulated_BP,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+sim_mat_simulated_MF_reduced <- reduceSimMatrix(sim_mat_simulated_MF,
+                                      scores = scores_simulated_MF,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+sim_mat_simulated_CC_reduced <- reduceSimMatrix(sim_mat_simulated_CC,
+                                      scores = scores_simulated_CC,
+                                      threshold = 0.7,
+                                      orgdb="org.Hs.eg.db")
+
+
+
+# simulated_BP_reduced <- left_join(sim_mat_simulated_BP_reduced, simulated_BP, 
+#                                 by = c("go" = "GO_ID"), keep = TRUE)
+# simulated_MF_reduced <- left_join(sim_mat_simulated_MF_reduced, simulated_MF, 
+#                                 by = c("go" = "GO_ID"), keep = TRUE)
+# simulated_CC_reduced <- left_join(sim_mat_simulated_CC_reduced, simulated_CC, 
+#                                 by = c("go" = "GO_ID"), keep = TRUE)
+
+
+treemapPlot(sim_mat_simulated_BP_reduced, title = "BP")
+treemapPlot(sim_mat_simulated_CC_reduced, title ="CC")
+treemapPlot(sim_mat_simulated_MF_reduced, title ="MF")
+
+
+
+```
+
+
+
+
+
+
 
 ```{r}
 #| label: enrichment-with-singletons

@@ -74,6 +74,8 @@ print_snv_info <- function(data, row){
 
 # Process reults of enrichment analysis
 process_enrichR <- function(enriched){
+  require(stringr)
+  require(dplyr)
   enriched |>
     filter(Adjusted.P.value <= 0.05) |> 
     mutate(GO_ID = str_extract(Term, "GO:[0-9]*"),
