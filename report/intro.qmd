@@ -1,0 +1,28 @@
+---
+title: "Introduction"
+author: "Jonathan Speh"
+format:
+  html:
+    code-fold: true
+    code-tools: true
+    df-print: paged 
+    tbl-cap-location: top
+    code-overflow: wrap
+    self-contained: true
+engine: knitr
+execute: 
+  cache: true
+  echo: false
+  output: true
+bibliography: references.bib
+---
+
+# Introduction
+
+Since the introduction of Sanger sequencing, almost 50 years ago, the field of DNA sequencing has made enormous technical advances. Massive parallel DNA sequencing techniques such as Illumina can sequence a human genome within a few days, and more recent methods for long read sequencing such as PacBio or Oxford Nanopore sequencing allow easier *de novo* assembly while increasing availability and portability of sequencing techniques [@shendure2017]. The relative technical ease to sequence humane genomes stands opposed to the continuous challenge of interpreting genetic variation. Analyses of the 1000 Genomes Project revealed that an individual has - depending on their ancestry - between 4.1 and 5 million Variants compared to the reference genome. Most of these Variants were Single Nucleotide Variants (SNVs) or short insertions and deletions (indels), they tend to be located in the non-coding genome, and up to 200 000 Variants per individual had allele frequencies below 0.5% [@auton2015]. All of this illustrates that accurately distinguishing neutral (or even beneficial) variants from malignant variants that cause or increase risks for diseases is not a trivial task, which currently still limits the clinical utility of whole genome sequencing technologies [@lappalainen2021; @shendure2017]. Several methods to tackle the challenge of predicting effects of genetic variants, but often provide a limited scope such as the coding genome [@cheng2023], splice Sites [@jaganathan2019] or specific regulatory sites [@sample2019]. **Some more about tools here??**
+
+-   Could mention GWAS; Family trio, QTLs Ensemble VEP...
+
+An alternative approach to estimating deleteriousness of genetic variant ist the Combined Annotation-Dependent Depletion (CADD) Framework, introduced by @kircher2014 . CADD uses the predicted deleteriousness, I.e. an evolutionary measure of reduced fitness, of a variant as an indicator for pathogenicity. The method is based on the assumption, that alleles that can be observed at high frequencies (\>95%) in humans but don't exist (or are rare?? - **Check**) in the human-chimpanzee ancestral genome are neutral or benign while simulated variants contain a significant number of deleterious variants that in reality would be removed by purifying selection. At the core of the CADD framework is a linear regression model, that was trained to use a large set of above 100 annotations to distinguish the observed (proxy-neutral) from the simulated (proxy-deleterious) variants [@kircher2014].
+
+The model was then applied to all theoretically possible SNVs in the human genome to compute CADD scores that indicates how likely a variant belongs to one of the classes. To improve comperability of the results, the CADD score has then been scaled onto a PHRED scale from 0 to 99 where a score of 10 indicates a variant being amongst the top 10% with the highest predicted deleteriousness, while a score of 20 indicates the top 1% etc. [@kircher2014; @rentzsch2019].
