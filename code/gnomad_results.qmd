@@ -60,9 +60,30 @@ overlap_phred40|>
   group_by(Consequence) |> 
   count() |> 
   arrange(desc(n))
-
 ```
 **Something's odd herer, check the non exome consequences - also in data with duplicates** 
+
+# Non-exome phred>40 results 
+```{r}
+keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
+         "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
+         "GeneID", "GeneName", "FeatureID", "Intron", "Exon", "cDNApos", 
+         "relcDNApos", "protPos", "relProtPos", "RawScore", "PHRED", 
+         "GnomAD_Exomes" = "GenomAD-Exomes")
+
+
+overlap_phred40_all <- process_caddscoring(fread("data/GRCh38_CADDv1.6_whole_genome_SNVs_inclAnno.phred40.gnomad-exome_overlap.tsv.gz"),
+                                    cols = keep, 
+                                    autosomes_only = TRUE) 
+
+overlap_phred40_all |>
+  filter(Ident %in% filter(overlap_phred40, AnnoType != "CodingTranscript")$Ident) |>
+  
+
+
+```
+
+
 
 
 
@@ -499,6 +520,18 @@ observed_v_simulated <- tibble(relcDNApos = c(simulated_stopgain$relcDNApos,
                            flag = c(rep("simulated", nrow(simulated_stopgain)),
                                     rep("observed", nrow(observed_stopgains)))) 
 ```
+
+```{r}
+#| label: compare-phred
+
+observed_v_simulated |>
+  #filter(PHRED > 40) |>
+  ggplot(aes(x = flag, y = PHRED)) +
+  geom_boxplot()
+
+```
+
+
 
 ```{r}
 #| label: plot-rel-position
