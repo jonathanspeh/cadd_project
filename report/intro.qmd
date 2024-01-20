@@ -2,13 +2,9 @@
 title: "Introduction"
 author: "Jonathan Speh"
 format:
-  html:
-    code-fold: true
-    code-tools: true
+  docx:
     df-print: paged 
     tbl-cap-location: top
-    code-overflow: wrap
-    self-contained: true
 engine: knitr
 execute: 
   cache: true
@@ -25,4 +21,14 @@ Since the introduction of Sanger sequencing, almost 50 years ago, the field of D
 
 An alternative approach to estimating deleteriousness of genetic variant ist the Combined Annotation-Dependent Depletion (CADD) Framework, introduced by @kircher2014 . CADD uses the predicted deleteriousness, I.e. an evolutionary measure of reduced fitness, of a variant as an indicator for pathogenicity. The method is based on the assumption, that alleles that can be observed at high frequencies (\>95%) in humans but don't exist (or are rare?? - **Check**) in the human-chimpanzee ancestral genome are neutral or benign while simulated variants contain a significant number of deleterious variants that in reality would be removed by purifying selection. At the core of the CADD framework is a linear regression model, that was trained to use a large set of above 100 annotations to distinguish the observed (proxy-neutral) from the simulated (proxy-deleterious) variants [@kircher2014].
 
-The model was then applied to all theoretically possible SNVs in the human genome to compute CADD scores that indicates how likely a variant belongs to one of the classes. To improve comperability of the results, the CADD score has then been scaled onto a PHRED scale from 0 to 99 where a score of 10 indicates a variant being amongst the top 10% with the highest predicted deleteriousness, while a score of 20 indicates the top 1% etc. [@kircher2014; @rentzsch2019].
+The model was then applied to all theoretically possible SNVs in the human genome to compute CADD scores that indicates how likely a variant belongs to one of the classes. To improve comperability of the results, the CADD score has then been scaled onto a PHRED scale from 0 to 99 where a score of 10 indicates a variant being amongst the top 10% with the highest predicted deleteriousness, while a score of 20 indicates the top 1% etc. [@kircher2014; @rentzsch2019]. Since its introduction, CADD has frequently been updated incorporate the updated reference genome (GRCh38) [@rentzsch2019] and to improve its predictive performance [@rentzsch2021; @schubach2024]. The model has been used in various research project and has found to be especially useful in prioritizing variants of unknown significance [@bongaerts2022; @tollefson2023]. **Some nice transition here**
+
+-   Many use treshhold \~ 15 - 25
+-   Many findings in the area 20 - 40
+-   Whats above?
+
+Single Nucleotide Variants can have different consequences, depending on their location and on and the kind of substitution they can for example affect regulatory sites, splices sites or they can lead to changes in coding regions such as loss or gain of stop codons or they lead to changes in a proteins amino acid sequence. @kircher2014 found, that variants with a lower PHRED score tend to be located in the non-coding regions of the genome, while variants with a higher PHRED are more often located in protein coding genes. At a PHRED above 40, virtually all variants where stop-gains (nonsense mutations). To date, these variants have however not been further investigated. Thus, it is unknown which SNVs in this group have been observed before and if they are known to be associated with phenotypes or diseases.
+
+In this projects, the Genome Aggregation Database (GnomAD) [@karczewski2020] has been used to identify SNVs with a PHRED above 40 that have previously been observed. Identified variants with the highest allele frequencies have then been investigated using additional database as well as literature research. Furthermore, gene ontology and phenotype enrichment analyses have been performed to compare genes that are affected by observed stop-gains with those that are affected by the simulated stop gains. Lastly, the relative positions of stop-gains on their respective genes have been compared.
+
+**Short Summary of Results / Discussion**
