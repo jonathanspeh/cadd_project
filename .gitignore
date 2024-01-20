@@ -61,3 +61,7 @@ code/download_raw.sh
 /quarto_output
 code/references.bib
 code/*_files/
+
+# Presentation
+presentation/
+img/

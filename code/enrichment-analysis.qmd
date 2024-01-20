@@ -270,14 +270,15 @@ pt_enrichment <- rbind(slice_min(simulated_enriched_sig, Adjusted.P.value, n = n
   
 pt_enrichment |>
   mutate(log10_P = log10(Adjusted.P.value)) |>
-  ggplot(aes(x = reorder(Term, -log10_P), y = log10_P, fill = Overlap)) +
+  ggplot(aes(x = reorder(Term, -log10_P), y = Overlap, fill = log10_P)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   facet_wrap(~flag, scales = "free_x") + 
-  scale_fill_gradient(low = "blue", high = "red") +
-  scale_y_reverse() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = -30) +
+ # scale_y_reverse() +
   theme(axis.title.y = element_blank(),
-        axis.title.x = element_text("log10 P-Value" ))
+        axis.title.x = element_text("Overlap" ),
+        legend.title = element_text("log10 P-Value"))
 
 
 
@@ -324,3 +325,8 @@ non_singleton_enriched_sig |> arrange(Adjusted.P.value) |>
 
 
 ```
+
+
+
+
+
