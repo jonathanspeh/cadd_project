@@ -29,6 +29,8 @@ The model was then applied to all theoretically possible SNVs in the human genom
 
 Single Nucleotide Variants can have different consequences, depending on their location and on and the kind of substitution they can for example affect regulatory sites, splices sites or they can lead to changes in coding regions such as loss or gain of stop codons or they lead to changes in a proteins amino acid sequence. @kircher2014 found, that variants with a lower PHRED score tend to be located in the non-coding regions of the genome, while variants with a higher PHRED are more often located in protein coding genes. At a PHRED above 40, virtually all variants where stop-gains (nonsense mutations). To date, these variants have however not been further investigated. Thus, it is unknown which SNVs in this group have been observed before and if they are known to be associated with phenotypes or diseases.
 
+**ADD Research QUESTION**
+
 In this projects, the Genome Aggregation Database (GnomAD) [@karczewski2020] has been used to identify SNVs with a PHRED above 40 that have previously been observed. Identified variants with the highest allele frequencies have then been investigated using additional database as well as literature research. Furthermore, gene ontology and phenotype enrichment analyses have been performed to compare genes that are affected by observed stop-gains with those that are affected by the simulated stop gains. Lastly, the relative positions of stop-gains on their respective genes have been compared.
 
 **Short Summary of Results / Discussion**
