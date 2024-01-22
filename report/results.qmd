@@ -1,0 +1,83 @@
+---
+title: "Results"
+author: "Jonathan Speh"
+format:
+  docx:
+    df-print: paged 
+    tbl-cap-location: top
+engine: knitr
+execute: 
+  cache: true
+  echo: false
+  output: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+# Format integers
+knit_print.integer = function(x, ...) {
+  prettyNum(x, big.mark=" ")
+}
+
+registerS3method(
+  "knit_print", "integer", knit_print.integer,
+  envir = asNamespace("knitr")
+)
+
+library(knitr)
+library(flextable)
+
+
+
+
+
+```
+
+```{r}
+#| include: false
+#| cache: false
+library(data.table)
+library(dplyr)
+
+all_phred40_snvs <- fread("processed_data/all_phred40.csv")
+overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv")
+
+n_phred40 <- nrow(all_phred40_snvs)
+n_observed <- nrow(overlap_phred40)
+
+mean(all_phred40_snvs$PHRED)
+mean(overlap_phred40$PHRED)
+```
+
+A total of `r n_phred40` variants on the autosomes had a PHRED score of at least 40. Of those variants, `r n_observed` (`r sprintf("%0.1f%%", n_observed/n_phred40 * 100)`) were found in the GnomAD database.
+
+Almost all variants (`r nrow(filter(overlap_phred40, Consequence == "STOP_GAINED"))`) were stop-gains, while only `r nrow(filter(overlap_phred40, Consequence == "NON_SYNONYMOU"))` non synonymous, `r nrow(filter(overlap_phred40, Consequence == "INTRONIC"))`, intronic, `r nrow(filter(overlap_phred40, Consequence == "SPLICE_SITE"))` splice site, `r nrow(filter(overlap_phred40, Consequence == "REGULATORY"))` regulatory, and `r nrow(filter(overlap_phred40, Consequence == "3PRIME_UTR"))` one Variant in the 3' UTR were identified. The majority of the observed SNVs (`r sprintf("%0.1f%%", nrow(filter(overlap_phred40, AC == 1))/n_observed * 100)`) are singletons (I.e. they have only been observed once). Only `r nrow(filter(overlap_phred40, AF >= 0.01))` variants had an allele frequency (AF) of at least 1% (i.e. are not rare variants). Interestingly, three variants with an AF greater than 50% were found in the observed data. Table 1 shows an overview of the identified SNVs with the highest allele frequencies.
+
+```{r}
+#| label: table-one
+#| tbl-cap-location: top
+#| tbl-cap: "Table 1. Variants with the highest allele frequencies."  
+
+overlap_phred40 |>
+  slice_max(AF, n = 5) |>
+  select(Chrom, Pos, Ref, Alt, PHRED, GeneName, AF) |>
+  kable(align = "lllllll") 
+
+```
+
+## Literature research of variants with high allele frequencies
+
+### 1-171208951-C\>T (rs6661174)
+
+The observed SNV with the highest allele frequncy was rs6661174. It leads to a premature stop codon on exon 9 of *FMO2*, a gene coding for Flavin Containing Dimethylaniline Monoxygenase 2. The alternative allele (T-allele) has an overall AF of `r arrange(overlap_phred40, desc(AF))$AF[1]`. It has allele frequencies of or close to 0 (100%) throughout all GnomAD ancestry groups except African / African American were the frequency is only 0.8764. The T allele leads to *FMO2* loss of function while the ancestral C allele leads to a functional allele. A study by @veeramah2008 found high frequencies of the C allele in the population of sub-Saharan Africa where approximately one third was at least heterozygote, but could not find evidence for selective pressure on either allele. In contrast, @mekonnen2017 propose that in specific African populations, the persistence of the functional allele can be explained by its association with reduced Tuberculosis disease activity.
+
+**For Discussion: C allele does not segregate together with known TB risk alleles**
+
+-   Problem - do the risk alleles have a molecular effect?
+-   If so –\> might they be actually responsible for the observed reduced TB?
+    -   Relevant section marked in paper
+
+### 5-75669297-G\>A (rs34358)
+
+This variant is a stop-gain in *ANKDD1B* , coding for Ankyrin Repeat And Death Domain Containing 1B. The alternative A allele is the major allele in all GnomAD ancestry groups except South Asian and East Asian were it has AFs of 0.44 and 0.35 respectively. The variant has been described as risk allele for type 2 diabetes and dyslipidaemia [@vujkovic2020] and as protective allele for migraine without aura [@zhang2022], however no studies investigating the evolutionary history of the allele and not evidence for a deleterious effect (like a pathogenic effect with early onset and high penetrance) could be found.
