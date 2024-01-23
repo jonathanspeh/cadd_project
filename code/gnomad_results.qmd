@@ -61,9 +61,11 @@ overlap_phred40|>
   count() |> 
   arrange(desc(n))
 ```
-**Something's odd herer, check the non exome consequences - also in data with duplicates** 
 
-# Non-exome phred>40 results 
+**Something's odd herer, check the non exome consequences - also in data with duplicates**
+
+# Non-exome phred\>40 results
+
 ```{r}
 keep <- c("Chrom" = "#Chrom", "Pos", "Ref", "Alt", "Type", "Length",
          "AnnoType", "Consequence", "ConsScore", "ConsDetail", 
@@ -82,10 +84,6 @@ overlap_phred40_all |>
 
 
 ```
-
-
-
-
 
 ```{r}
 #| label: histogram-phred40
@@ -238,7 +236,7 @@ Of all variants, (`r nrow(filter(overlap_phred40, AF > 0.5))` where found where 
 
     -   Carriers of functional reference Allele secrete AB0 Antigens in body fluids,
     -   Secretor PT has associations with
-        -   ABO haemolytic disease in the newborn (Secretor Mother increases risk for B infants) [@krog2023]
+        -   ABO haemolytic disease in the newborn (Secretor FUT2Mother increases risk for B infants) [@krog2023]
         -   enterotoxic *E. coli* infection (non-secretors have increased risk for symptomatic ETEC) [@mottram2017]
         -   Gut microbiome [@thorman2023; @wacklin2011]
 
@@ -351,10 +349,7 @@ treemapPlot(sim_mat_CC_reduced, title = "Cellular Component enriched in PHRED > 
 
 ```
 
-
-
-
-## Add here: GO EA of Phred > 40, not observed Stopgains
+## Add here: GO EA of Phred \> 40, not observed Stopgains
 
 ```{r}
 #| label:  enrich-simulated-stopgains
@@ -428,12 +423,6 @@ treemapPlot(sim_mat_simulated_MF_reduced, title ="MF")
 
 
 ```
-
-
-
-
-
-
 
 ```{r}
 #| label: enrichment-with-singletons
@@ -530,8 +519,6 @@ observed_v_simulated |>
   geom_boxplot()
 
 ```
-
-
 
 ```{r}
 #| label: plot-rel-position

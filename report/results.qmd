@@ -15,22 +15,9 @@ bibliography: references.bib
 
 ```{r}
 #| label: setup
-# Format integers
-knit_print.integer = function(x, ...) {
-  prettyNum(x, big.mark=" ")
-}
-
-registerS3method(
-  "knit_print", "integer", knit_print.integer,
-  envir = asNamespace("knitr")
-)
 
 library(knitr)
 library(flextable)
-
-
-
-
 
 ```
 
@@ -46,8 +33,6 @@ overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv")
 n_phred40 <- nrow(all_phred40_snvs)
 n_observed <- nrow(overlap_phred40)
 
-mean(all_phred40_snvs$PHRED)
-mean(overlap_phred40$PHRED)
 ```
 
 A total of `r n_phred40` variants on the autosomes had a PHRED score of at least 40. Of those variants, `r n_observed` (`r sprintf("%0.1f%%", n_observed/n_phred40 * 100)`) were found in the GnomAD database.
@@ -61,8 +46,20 @@ Almost all variants (`r nrow(filter(overlap_phred40, Consequence == "STOP_GAINED
 
 overlap_phred40 |>
   slice_max(AF, n = 5) |>
-  select(Chrom, Pos, Ref, Alt, PHRED, GeneName, AF) |>
-  kable(align = "lllllll") 
+  select(Chrom, Pos, Ref, Alt, PHRED, "Gene" = GeneName, AF) |> 
+#  kable(align = "lllllll") |>
+  flextable() |>
+  theme_booktabs(bold_header = TRUE) |>
+  align(align = "left", part = "all") |>
+  italic(j = "Gene") |> 
+  flextable::colformat_num(j = 2, big.mark = "") |>
+  
+  #set_header_labels(Chrom = "Chromosome", Pos = "Position", 
+  #          Ref = "Reference", Alt = "Alternative", PHRED = "PHRED", GeneName = "Gene", 
+  #          AF = "Allele Frequency") |>
+  fontsize(size = 10)
+
+   
 
 ```
 
@@ -81,3 +78,23 @@ The observed SNV with the highest allele frequncy was rs6661174. It leads to a p
 ### 5-75669297-G\>A (rs34358)
 
 This variant is a stop-gain in *ANKDD1B* , coding for Ankyrin Repeat And Death Domain Containing 1B. The alternative A allele is the major allele in all GnomAD ancestry groups except South Asian and East Asian were it has AFs of 0.44 and 0.35 respectively. The variant has been described as risk allele for type 2 diabetes and dyslipidaemia [@vujkovic2020] and as protective allele for migraine without aura [@zhang2022], however no studies investigating the evolutionary history of the allele and not evidence for a deleterious effect (like a pathogenic effect with early onset and high penetrance) could be found.
+
+### 1-54716627-T\>A (rs1147990)
+
+This variant has an overall frequency of 0.55. It is most frequent in the East Asian (0.98) and South Asian (0.72) ancestry group. Altough beeing annotated as stop gain in *MROH7-TTC4* by CADD v1.6, the variant is actually located in a read-trough transcript between *MROH7* and *TTC4,* two neighbouring genes. Multiple variants of the transcript can arise from alternative splicing, however they are likely destroyed by nonsense mediated decay and do not encode any protein. In CADD v1.7 which uses updated Ensemble annotations, the transcript is no longer annotated as coding gene. With that change, the variant's PHRED score was markedly reduced to 19.97.
+
+### 7-21543345-G\>T (rs2285943)
+
+Rs2285943 is predicted to result in a stop gain on exon 1/82 of *DNAH11.* The variant is relatively common (AFs 0.29 - 0.55) troughout all GnomAD ancestry groups. It is known that DNAH11 loss of function leads to Primary Ciliary Dyskineasia [@bartoloni2002; @lai2016; @schwabe2008], however, multiple ClinVar submissions indicated that rs2285943 is not linked to that condition.
+
+\*\*For discussion\*\*
+
+-   Genome Browswer shows alternative promotor just downstream of variant
+-   alt promotor: <https://genome.ucsc.edu/cgi-bin/hgc?hgsid=1885897182_19ARA0SsykGacZ7HT0dy80zu9yoK&db=hg38&c=chr7&l=21543005&r=21547379&o=21543345&t=21543495&g=knownAlt&i=altPromoter>
+-   Range: [chr7:21543346-21543495](https://genome.ucsc.edu/cgi-bin/hgTracks?hgsid=1885897182_19ARA0SsykGacZ7HT0dy80zu9yoK&db=hg38&position=chr7%3A21543346-21543495)
+
+### 19-48703417-G\>A (rs601338)
+
+The fifth of the selected variants leads to a loss of function in *FUT2.* With allele frequencies between 0.30 in Admixed Americans and 0.52 in Middle Easterns, it is common in most ancestry groups. However, the variant is rare in East Asian (AF 0.002). The variant affects the function of the alpha(1,2)fucosyltransferase which is responsible for secretion of ABO antigens. Carriers of a functional *FUT2* allele secrete these antigens in their bodily fluids while homozygous or compound heterozygous carriers fo non-functional FUT2 (for example caused by rs601338) do not secret the antigens. The secretor phenotype (secretor polymorphism) seems to be associated as both, a risk or a protective factor, with numerous conditions and diseases [@krog2023; @mottram2017].
+
+## Enrichment analysis 
