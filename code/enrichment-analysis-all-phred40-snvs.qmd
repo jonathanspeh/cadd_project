@@ -61,22 +61,24 @@ fwrite(phred40_unique_all, "processed_data/all_phred40.csv")
 #| label: prepare-observed
 #| message: false
 
-observed_stopgains <-  fread("processed_data/overlap_phred40_unique_parsed.csv")
-observed_stopgains_phred40 <- observed_stopgains |> 
-  filter(PHRED >= 40, 
-         AC > 1) # TODO: try without removing singletons?
+observed_phred40 <-  fread("processed_data/overlap_phred40_unique_parsed.csv")
+observed_phred40_no_singletons <- observed_phred40 |> 
+  filter(AC > 1) 
 
-genelist_observed <- unique(observed_stopgains_phred40$GeneName)
+genelist_observed <- unique(observed_phred40_no_singletons$GeneName)
 
 
 
 dbs <- c("GO_Biological_Process_2023", "GO_Cellular_Component_2023", "GO_Molecular_Function_2023")
+
 
 enriched_observed <- enrichr(unique(genelist_observed), dbs)
 
 observed_BP <- process_enrichR(enriched_observed$GO_Biological_Process_2023)
 observed_MF <- process_enrichR(enriched_observed$GO_Molecular_Function_2023)
 observed_CC <- process_enrichR(enriched_observed$GO_Cellular_Component_2023)
+
+fwrite(observed_BP, "processed_data/GOBP_observed.csv")
 
 observed_sim_mat_BP <- calculateSimMatrix(observed_BP$GO_ID,
                    orgdb="org.Hs.eg.db",
@@ -113,22 +115,19 @@ observed_sim_mat_CC_reduced <- reduceSimMatrix(observed_sim_mat_CC,
                                       threshold = 0.7,
                                       orgdb="org.Hs.eg.db")
 
-
-
+fwrite(observed_sim_mat_BP_reduced, "processed_data/GOBP_observed_reduced.csv")
 ```
 
 ```{r}
 #| label: prepare-simulated
 #| message: false
 
-all_stopgains <-  fread("processed_data/all_phred40.csv")
-simulated_stopgains <- anti_join(all_stopgains[,c("Ident", "relcDNApos", "PHRED", "GeneName")],
-                                observed_stopgains[,c("Ident", "relcDNApos", "PHRED",  "GeneName")],
+all_phred40 <-  fread("processed_data/all_phred40.csv")
+simulated_phred40 <- anti_join(all_phred40[,c("Ident", "relcDNApos", "PHRED", "GeneName")],
+                                observed_phred40[,c("Ident", "relcDNApos", "PHRED",  "GeneName")],
                                 by = join_by(Ident, relcDNApos, PHRED))
 
-simulated_stopgains_phred40 <- simulated_stopgains |> filter(PHRED >= 40)
-
-genelist_simulated <- unique(simulated_stopgains_phred40$GeneName)
+genelist_simulated <- unique(simulated_phred40$GeneName)
 
 dbs <- c("GO_Biological_Process_2023", "GO_Cellular_Component_2023", "GO_Molecular_Function_2023")
 
@@ -137,6 +136,9 @@ enriched_simulated <- enrichr(unique(genelist_simulated), dbs)
 simulated_BP <- process_enrichR(enriched_simulated$GO_Biological_Process_2023)
 simulated_MF <- process_enrichR(enriched_simulated$GO_Molecular_Function_2023)
 simulated_CC <- process_enrichR(enriched_simulated$GO_Cellular_Component_2023)
+
+fwrite(simulated_BP, "processed_data/GOBP_simulated.csv")
+
 
 simulated_sim_mat_BP <- calculateSimMatrix(simulated_BP$GO_ID,
                    orgdb="org.Hs.eg.db",
@@ -173,7 +175,7 @@ simulated_sim_mat_CC_reduced <- reduceSimMatrix(simulated_sim_mat_CC,
                                       threshold = 0.7,
                                       orgdb="org.Hs.eg.db")
 
-
+fwrite(simulated_sim_mat_BP_reduced, "processed_data/GOBP_simulated_reduced.csv")
 ```
 
 ```{r}
@@ -185,7 +187,7 @@ simulated_sim_mat_CC_reduced <- reduceSimMatrix(simulated_sim_mat_CC,
 #| fig-cap: "Biological Process"
 
 
-treemapPlot(observed_sim_mat_BP_reduced, title = "Observed")
+treemapPlot(observed_sim_mat_BP_reduced, size = "score", title = "Observed")
 treemapPlot(simulated_sim_mat_BP_reduced, title = "Simulated")
 ```
 
@@ -227,13 +229,13 @@ treemapPlot(simulated_sim_mat_MF_reduced, title = "Simulated")
 dbs <- c("MGI_Mammalian_Phenotype_Level_4_2021")
 
 
-genelist_singleton <- observed_stopgains |> filter(PHRED >= 40, 
+genelist_singleton <- observed_phred40 |> filter(PHRED >= 40, 
                                                         AC == 1)
 
 genelist_singleton <- unique(genelist_singleton$GeneName)
 
 
-genelist_non_singleton <- observed_stopgains |> filter(PHRED >= 40, 
+genelist_non_singleton <- observed_phred40 |> filter(PHRED >= 40, 
                                                         AC > 1)
 genelist_non_singleton <- unique(genelist_non_singleton$GeneName)
 
@@ -263,13 +265,18 @@ simulated_enriched_sig <- simulated_enriched$MGI_Mammalian_Phenotype_Level_4_202
 simulated_enriched_sig |> arrange(Adjusted.P.value)
 singleton_enriched_sig |> arrange(Adjusted.P.value)
 non_singleton_enriched_sig |> arrange(Adjusted.P.value)
+
+fwrite(simulated_enriched_sig, "processed_data/pte_simulated.csv")
+fwrite(singleton_enriched_sig, "processed_data/pte_singleton.csv")
+fwrite(non_singleton_enriched_sig, "processed_data/pte_non_singleton.csv")
+
 ```
 
 ```{r}
 #| label: plot-pte-facet
 #| output: true
 
-n = 10
+n = 15
 
 pt_enrichment <- rbind(slice_min(simulated_enriched_sig, Adjusted.P.value, n = n, with_ties = FALSE),
       slice_min(singleton_enriched_sig, Adjusted.P.value, n = n, with_ties = FALSE),
@@ -302,9 +309,6 @@ pt_enrichment |>
   theme(axis.title.y = element_blank(),
         axis.title.x = element_text("Overlap" ),
         legend.title = element_text("log10 P-Value"))
-
-
-
 ```
 
 -   Gene lists from simulated SNVs and Singletons are enriched for more "lethal" phenotypes than the gene list from non-singleton SNVs

@@ -5,6 +5,12 @@ format:
   docx:
     df-print: paged 
     tbl-cap-location: top
+    reference-doc: custom-reference-doc.docx 
+    toc: false
+  html: 
+    self-contained: true
+  pdf: 
+    toc: false
 engine: knitr
 execute: 
   cache: true
@@ -97,4 +103,43 @@ Rs2285943 is predicted to result in a stop gain on exon 1/82 of *DNAH11.* The va
 
 The fifth of the selected variants leads to a loss of function in *FUT2.* With allele frequencies between 0.30 in Admixed Americans and 0.52 in Middle Easterns, it is common in most ancestry groups. However, the variant is rare in East Asian (AF 0.002). The variant affects the function of the alpha(1,2)fucosyltransferase which is responsible for secretion of ABO antigens. Carriers of a functional *FUT2* allele secrete these antigens in their bodily fluids while homozygous or compound heterozygous carriers fo non-functional FUT2 (for example caused by rs601338) do not secret the antigens. The secretor phenotype (secretor polymorphism) seems to be associated as both, a risk or a protective factor, with numerous conditions and diseases [@krog2023; @mottram2017].
 
-## Enrichment analysis 
+## Enrichment analysis
+
+```{r}
+
+GOBP_observed <- fread("processed_data/GOBP_observed.csv")
+GOBP_observed_reduced <- fread("processed_data/GOBP_observed_reduced.csv")
+
+GOBP_simulated <- fread("processed_data/GOBP_simulated.csv")
+GOBP_simulated_reduced <- fread("processed_data/GOBP_simulated_reduced.csv")
+
+PT_simulated <- fread("processed_data/pte_simulated.csv")
+PT_singletons <- fread("processed_data/pte_singleton.csv")
+PT_non_singletons <- fread("processed_data/pte_non_singleton.csv")
+```
+
+Geneontology enrichment analysis revealed `r nrow(GOBP_observed)` significantly enriched biological processes for the genes that contained observed SNVs, resulting in `r max(GOBP_observed_reduced$cluster)` clusters with semantically distinct functions. Analysis of the gene list derived simulated but not observed SNVs yielded `r nrow(GOBP_simulated)` enriched terms in `r max(GOBP_simulated_reduced$cluster)` distinct clusters. Figure 1 shows the enriched clusters for both groups.
+
+::: {#fig-treemaps layout-ncol="2"}
+![](/img/plot-ea-bp-1.png)
+
+![](/img/plot-ea-bp-2.png)
+
+Treemaps of the biological processes that are enriched in  genelists derived from  observed (left) and  simulated (right) variants. The size of the rectangles indicates negative log10 adjusted p-value.
+:::
+
+Genotype enrichment analysis showed that genes with observed SNVs with a Phred over 40 tend to be involved processes that affect cell and tissue morphology (extracellular structure organization and intermediate filament organisation, cell-matrix adhesion), cation transport, and metabolic processes (fatty acid metabolic process, proteolysis, glycerophospholipid biosynthetic processes). The genelist from the simulated SNVs on the other hand was mainly enriched for processes that regulate gene expression, cell proliferation and differentiation or are involved in cellular signalling. 
+
+The phenotype enrichment analysis revealed `r nrow(PT_simulated)`, `r nrow(PT_singletons)`, and `r nrow(PT_non_singletons)` for the gene lists derived from simulated, singleton and non-singleton SNVs respectively. The 10 most significantly enriched terms (lowest adjusted P-value) are shown in Figure 2. 
+
+::: {fig-treemaps}
+![](/img/plot-pte-facet-1.png)
+The most significantly enriched phenotypes for genes on which simulated, singleton, and non-singleton SNVs are found. The colour of the bars represents the statistical significance as negative log10 adjusted P-value and the bars show the fraction of genes found in the respective gene lists compared to all genes that map to the phenotype. 
+:::
+
+
+
+
+# References
+
+
