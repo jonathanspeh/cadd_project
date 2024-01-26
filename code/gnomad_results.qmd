@@ -531,15 +531,16 @@ observed_v_simulated |>
 #   ggplot(aes(x = relcDNApos, colour = phred40, fill = phred40)) +
 #   geom_density(alpha = 0.1)
 
-observed_v_simulated |>
-  mutate(phred_bin = case_when(PHRED < 20 ~ "0-20",
-                               PHRED < 40 ~ "20-40",
-                               PHRED < 60 ~ "40-60",
-                               PHRED < 80 ~ "60-80",
-                               TRUE ~ "80-100"),
-         flag = factor(flag, levels = c("simulated", "observed"))) |>
-  ggplot(aes(x = relcDNApos, y = phred_bin)) +
-  geom_density_ridges_gradient() 
+# observed_v_simulated |>
+#   mutate(phred_bin = case_when(PHRED < 20 ~ "1-20",
+#                                PHRED < 40 ~ "20-40",
+#                                PHRED < 60 ~ "40-60",
+#                                PHRED < 80 ~ "60-80",
+#                                TRUE ~ "80-100"),
+#          flag = factor(flag, levels = c("simulated", "observed"))) |>
+#   ggplot(aes(x = relcDNApos, y = phred_bin, colour = flag, fill = flag)) +
+#   geom_density_ridges_gradient(alpha = 0.1) +
+#   geom_point(position = "jitter")
 
 
 # observed_v_simulated |> 
@@ -560,6 +561,37 @@ observed_v_simulated |>
   geom_density(alpha = 0.1) +
   facet_wrap(~phred40) +
   theme_minimal()
+
+
+
+
+
+
+observed_v_simulated |>
+  filter(PHRED >= 40) |>
+  ggplot(aes(x = relcDNApos, colour = flag, fill = flag)) +
+  geom_density(alpha = 0.1) +
+  theme_minimal()
+
+
+observed_v_simulated |>
+    mutate(phred40 = ifelse(PHRED < 40, "PHRED below 40", "PHRED above 40"),
+         phred40 = factor(phred40, levels = c("PHRED below 40", 
+                                              "PHRED above 40"))) |>
+  ggplot(aes(x = phred40, y = relcDNApos, fill =flag)) +
+  geom_boxplot()
+
+
+my_dat <- observed_v_simulated |>
+    mutate(phred40 = ifelse(PHRED < 40, "below_40", "above_40")) |>
+  mutate(group = paste(flag, PHRED, sep = "_"))
+
+FSA::dunnTest(relcDNApos ~ group,
+  data = my_dat,
+  method = "holm"
+)
+  
+
 
 
 ```

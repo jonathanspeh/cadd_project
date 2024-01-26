@@ -276,7 +276,12 @@ fwrite(non_singleton_enriched_sig, "processed_data/pte_non_singleton.csv")
 #| label: plot-pte-facet
 #| output: true
 
-n = 15
+simulated_enriched_sig <- fread("processed_data/pte_simulated.csv")
+singleton_enriched_sig <- fread("processed_data/pte_singleton.csv")
+non_singleton_enriched_sig <- fread("processed_data/pte_non_singleton.csv")
+
+
+n = 10
 
 pt_enrichment <- rbind(slice_min(simulated_enriched_sig, Adjusted.P.value, n = n, with_ties = FALSE),
       slice_min(singleton_enriched_sig, Adjusted.P.value, n = n, with_ties = FALSE),
@@ -303,7 +308,7 @@ pt_enrichment |>
   ggplot(aes(x = reorder(Term, -log10_P), y = Overlap, fill = log10_P)) +
   geom_bar(stat = "identity") +
   coord_flip() +
-  facet_wrap(~flag, scales = "free_x") + 
+  facet_wrap(~flag) + 
   scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = -30) +
  # scale_y_reverse() +
   theme(axis.title.y = element_blank(),

@@ -39,6 +39,6 @@ Gene ontology and phenotype enrichment analysis have been performed with the enr
 
 ## Analysis of relative cDNA positions
 
-To identify where on the genes deleterious stop gains are most often located, the distribution of their relative cDNA position as returned by CADD was plotted using the geom_density function provided by ggplot2.
+To identify where on the genes deleterious stop gains are most often located, the distribution of the relative cDNA position of observed and simulated stop-gains with Phred scores below and above 40 was plotted using the geom_density function provided by ggplot2 using default parameters.
 
 # References
