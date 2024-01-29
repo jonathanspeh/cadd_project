@@ -26,7 +26,7 @@ bibliography: references.bib
 
 library(knitr)
 library(flextable)
-
+options(scipen = 10000)
 ```
 
 ```{r}
@@ -40,12 +40,11 @@ overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv")
 
 n_phred40 <- nrow(all_phred40_snvs)
 n_observed <- nrow(overlap_phred40)
-
 ```
 
-A total of `r n_phred40` variants on the autosomes had a PHRED score of at least 40. Of those variants, `r n_observed` (`r sprintf("%0.1f%%", n_observed/n_phred40 * 100)`) were found in the GnomAD database.
+A total of `r format(n_phred40, big.mark = " ")` variants on the autosomes had a PHRED score of at least 40. Of those variants, `r n_observed` (`r sprintf("%0.1f%%", n_observed/n_phred40 * 100)`) were found in the GnomAD database.
 
-Almost all variants (`r nrow(filter(overlap_phred40, Consequence == "STOP_GAINED"))`) were stop-gains, while only `r nrow(filter(overlap_phred40, Consequence == "NON_SYNONYMOU"))` non synonymous, `r nrow(filter(overlap_phred40, Consequence == "INTRONIC"))`, intronic, `r nrow(filter(overlap_phred40, Consequence == "SPLICE_SITE"))` splice site, `r nrow(filter(overlap_phred40, Consequence == "REGULATORY"))` regulatory, and `r nrow(filter(overlap_phred40, Consequence == "3PRIME_UTR"))` one Variant in the 3' UTR were identified. The majority of the observed SNVs (`r sprintf("%0.1f%%", nrow(filter(overlap_phred40, AC == 1))/n_observed * 100)`) are singletons (I.e. they have only been observed once). Only `r nrow(filter(overlap_phred40, AF >= 0.01))` variants had an allele frequency (AF) of at least 1% (i.e. are not rare variants). Interestingly, three variants with an AF greater than 50% were found in the observed data. Table 1 shows an overview of the identified SNVs with the highest allele frequencies.
+Almost all variants (`r nrow(filter(overlap_phred40, Consequence == "STOP_GAINED"))`) were stop-gains, while only `r nrow(filter(overlap_phred40, Consequence == "NON_SYNONYMOUS"))` non-synonymous, `r nrow(filter(overlap_phred40, Consequence == "INTRONIC"))`, intronic, `r nrow(filter(overlap_phred40, Consequence == "SPLICE_SITE"))` splice site, `r nrow(filter(overlap_phred40, Consequence == "REGULATORY"))` regulatory, and `r nrow(filter(overlap_phred40, Consequence == "3PRIME_UTR"))` one Variant in the 3' UTR were identified. The majority of the observed SNVs (`r sprintf("%0.1f%%", nrow(filter(overlap_phred40, AC == 1))/n_observed * 100)`) are singletons (I.e. they have only been observed once). Only `r format(nrow(filter(overlap_phred40, AF >= 0.01)), big.mark = " ")` variants had an allele frequency (AF) of at least 1% (i.e. are not rare variants). Interestingly, three variants with an AF greater than 50% were found in the observed data. Table 1 shows an overview of the identified SNVs with the highest allele frequencies.
 
 ```{r}
 #| label: table-one
@@ -75,7 +74,7 @@ overlap_phred40 |>
 
 ### 1-171208951-C\>T (rs6661174)
 
-The observed SNV with the highest allele frequncy was rs6661174. It leads to a premature stop codon on exon 9 of *FMO2*, a gene coding for Flavin Containing Dimethylaniline Monoxygenase 2. The alternative allele (T-allele) has an overall AF of `r arrange(overlap_phred40, desc(AF))$AF[1]`. It has allele frequencies of or close to 0 (100%) throughout all GnomAD ancestry groups except African / African American were the frequency is only 0.8764. The T allele leads to *FMO2* loss of function while the ancestral C allele leads to a functional allele. A study by @veeramah2008 found high frequencies of the C allele in the population of sub-Saharan Africa where approximately one third was at least heterozygote, but could not find evidence for selective pressure on either allele. In contrast, @mekonnen2017 propose that in specific African populations, the persistence of the functional allele can be explained by its association with reduced Tuberculosis disease activity.
+The observed SNV with the highest allele frequency was rs6661174. It leads to a premature stop codon on exon 9 of *FMO2*, a gene coding for Flavin Containing Dimethylaniline Monooxygenase 2. The alternative allele (T-allele) has an overall AF of `r round(arrange(overlap_phred40, desc(AF))$AF[1], 2)`. It has allele frequencies of or close to 0 (100%) throughout all GnomAD ancestry groups except African / African American where the frequency is only 0.88. The T allele leads to *FMO2* loss of function while the ancestral C allele leads to a functional allele. A study by @veeramah2008 found high frequencies of the C allele in the population of sub-Saharan Africa where approximately one-third was at least heterozygote, but could not find evidence for selective pressure on either allele. In contrast, @mekonnen2017 propose that in specific African populations, the persistence of the functional allele can be explained by its association with reduced Tuberculosis disease activity.
 
 **For Discussion: C allele does not segregate together with known TB risk alleles**
 
@@ -85,15 +84,15 @@ The observed SNV with the highest allele frequncy was rs6661174. It leads to a p
 
 ### 5-75669297-G\>A (rs34358)
 
-This variant is a stop-gain in *ANKDD1B* , coding for Ankyrin Repeat And Death Domain Containing 1B. The alternative A allele is the major allele in all GnomAD ancestry groups except South Asian and East Asian were it has AFs of 0.44 and 0.35 respectively. The variant has been described as risk allele for type 2 diabetes and dyslipidaemia [@vujkovic2020] and as protective allele for migraine without aura [@zhang2022], however no studies investigating the evolutionary history of the allele and not evidence for a deleterious effect (like a pathogenic effect with early onset and high penetrance) could be found.
+This variant is a stop-gain in *ANKDD1B*, coding for Ankyrin Repeat And Death Domain Containing 1B. The alternative A allele is the major allele in all GnomAD ancestry groups except South Asian and East Asian where it has AFs of 0.44 and 0.35 respectively. The variant has been described as a risk allele for type 2 diabetes and dyslipidemia [@vujkovic2020] and as a protective allele for migraine without aura [@zhang2022], however no studies investigating the evolutionary history of the allele and no evidence for a deleterious effect (like a pathogenic effect with early onset and high penetrance) could be found.
 
 ### 1-54716627-T\>A (rs1147990)
 
-This variant has an overall frequency of 0.55. It is most frequent in the East Asian (0.98) and South Asian (0.72) ancestry group. Altough beeing annotated as stop gain in *MROH7-TTC4* by CADD v1.6, the variant is actually located in a read-trough transcript between *MROH7* and *TTC4,* two neighbouring genes. Multiple variants of the transcript can arise from alternative splicing, however they are likely destroyed by nonsense mediated decay and do not encode any protein. In CADD v1.7 which uses updated Ensemble annotations, the transcript is no longer annotated as coding gene. With that change, the variant's PHRED score was markedly reduced to 19.97.
+This variant has an overall frequency of 0.55. It is most frequent in the East Asian (0.98) and South Asian (0.72) ancestry groups. Although being annotated as stop gain in *MROH7-TTC4* by CADD v1.6, the variant is located in a read-trough transcript between *MROH7* and *TTC4,* two neighboring genes. Multiple variants of the transcript can arise from alternative splicing, however, they are likely degraded by nonsense-mediated decay and do not encode any protein. In CADD v1.7 which uses updated Ensemble annotations, the transcript is no longer annotated as a coding gene. With that change, the variant's PHRED score was markedly reduced to 19.97.
 
 ### 7-21543345-G\>T (rs2285943)
 
-Rs2285943 is predicted to result in a stop gain on exon 1/82 of *DNAH11.* The variant is relatively common (AFs 0.29 - 0.55) troughout all GnomAD ancestry groups. It is known that DNAH11 loss of function leads to Primary Ciliary Dyskineasia [@bartoloni2002; @lai2016; @schwabe2008], however, multiple ClinVar submissions indicated that rs2285943 is not linked to that condition.
+Rs2285943 is predicted to result in a stop gain on exon 1/82 of *DNAH11.* The variant is common (AFs 0.29 - 0.55) throughout all GnomAD ancestry groups. It is known that DNAH11 loss of function leads to Primary Ciliary Dyskineasia [@bartoloni2002; @lai2016; @schwabe2008], however, multiple ClinVar submissions indicated that rs2285943 is not linked to that condition.
 
 \*\*For discussion\*\*
 
@@ -103,7 +102,7 @@ Rs2285943 is predicted to result in a stop gain on exon 1/82 of *DNAH11.* The va
 
 ### 19-48703417-G\>A (rs601338)
 
-The fifth of the selected variants leads to a loss of function in *FUT2.* With allele frequencies between 0.30 in Admixed Americans and 0.52 in Middle Easterns, it is common in most ancestry groups. However, the variant is rare in East Asian (AF 0.002). The variant affects the function of the alpha(1,2)fucosyltransferase which is responsible for secretion of ABO antigens. Carriers of a functional *FUT2* allele secrete these antigens in their bodily fluids while homozygous or compound heterozygous carriers fo non-functional FUT2 (for example caused by rs601338) do not secret the antigens. The secretor phenotype (secretor polymorphism) seems to be associated as both, a risk or a protective factor, with numerous conditions and diseases [@krog2023; @mottram2017].
+The fifth of the selected variants leads to a loss of function in *FUT2.* With allele frequencies between 0.30 in Admixed Americans and 0.52 in Middle Easterns, it is common in most ancestry groups. However, the variant is rare in East Asians (AF 0.002). The variant affects the function of the alpha(1,2)fucosyltransferase which is responsible for secretion of ABO antigens. Carriers of a functional *FUT2* allele secrete these antigens in their bodily fluids while homozygous or compound heterozygous carriers of non-functional FUT2 (for example caused by rs601338) do not secret the antigens. The secretor phenotype (secretor polymorphism) seems to be associated as both, a risk or a protective factor, with numerous conditions and diseases [@krog2023; @mottram2017].
 
 ## Enrichment analysis
 
@@ -120,32 +119,25 @@ PT_singletons <- fread("processed_data/pte_singleton.csv")
 PT_non_singletons <- fread("processed_data/pte_non_singleton.csv")
 ```
 
-Geneontology enrichment analysis revealed `r nrow(GOBP_observed)` significantly enriched biological processes for the genes that contained observed SNVs, resulting in `r max(GOBP_observed_reduced$cluster)` clusters with semantically distinct functions. Analysis of the gene list derived simulated but not observed SNVs yielded `r nrow(GOBP_simulated)` enriched terms in `r max(GOBP_simulated_reduced$cluster)` distinct clusters. Figure 1 shows the enriched clusters for both groups.
-
+Gene ontology enrichment analysis revealed `r nrow(GOBP_observed)` significantly enriched biological processes for the genes that contained observed SNVs, resulting in `r max(GOBP_observed_reduced$cluster)` clusters with semantically distinct functions. Analysis of the gene list derived simulated but not observed SNVs yielded `r nrow(GOBP_simulated)` enriched terms in `r max(GOBP_simulated_reduced$cluster)` distinct clusters. Figure 1 shows the enriched clusters for both groups.
 
 ::: {#fig-treemaps}
+![](/img/plot-ea-bp-1.png) ![](/img/plot-ea-bp-2.png)
 
-![](/img/plot-ea-bp-1.png)
-![](/img/plot-ea-bp-2.png)
-
-Treemaps of the biological processes that are enriched in  genelists derived from  observed (left) and  simulated (right) variants. The size of the rectangles indicates negative log10 adjusted p-value.
+Treemaps of the biological processes that are enriched in gene lists derived from observed (left) and simulated (right) variants. The size of the rectangles indicates the negative log10 adjusted p-value.
 :::
 
+Genotype enrichment analysis showed that genes with observed SNVs with a Phred over 40 tend to be involved in processes that affect cell and tissue morphology (extracellular structure organization and intermediate filament organisation, cell-matrix adhesion), cation transport, and metabolic processes (fatty acid metabolic process, proteolysis, glycerophospholipid biosynthetic processes). The genelist from the simulated SNVs on the other hand was mainly enriched for processes that regulate gene expression, cell proliferation, and differentiation or are involved in cellular signalling.
 
-Genotype enrichment analysis showed that genes with observed SNVs with a Phred over 40 tend to be involved processes that affect cell and tissue morphology (extracellular structure organization and intermediate filament organisation, cell-matrix adhesion), cation transport, and metabolic processes (fatty acid metabolic process, proteolysis, glycerophospholipid biosynthetic processes). The genelist from the simulated SNVs on the other hand was mainly enriched for processes that regulate gene expression, cell proliferation and differentiation or are involved in cellular signalling. 
-
-The phenotype enrichment analysis revealed `r nrow(PT_simulated)`, `r nrow(PT_singletons)`, and `r nrow(PT_non_singletons)` for the gene lists derived from simulated, singleton and non-singleton SNVs respectively. The 10 most significantly enriched terms (lowest adjusted P-value) are shown in Figure 2. 
-
+The phenotype enrichment analysis revealed `r nrow(PT_simulated)`, `r nrow(PT_singletons)`, and `r nrow(PT_non_singletons)` significantly enriched terms for the gene lists derived from simulated, singleton and non-singleton SNVs respectively. The 10 most significantly enriched terms (lowest adjusted P-value) are shown in Figure 2.
 
 ::: {#fig-pte}
 ![](/img/plot-pte-facet-1.png)
-The most significantly enriched phenotypes for genes on which simulated, singleton, and non-singleton SNVs with Phred scores above 40 are found. The colour of the bars represents the statistical significance as negative log10 adjusted P-value and the bars show the fraction of genes found in the respective gene lists compared to all genes that map to the phenotype. 
 
+The most significantly enriched phenotypes for genes on which simulated, singleton, and non-singleton SNVs with Phred scores above 40 are found. The colour of the bars represents the statistical significance as negative log10 adjusted P-value and the bars show the fraction of genes found in the respective gene lists compared to all genes that map to the phenotype.
 :::
 
-
-
-The phenotype enrichment analysis showed, that in the simulated and singleton groups most of the most significantly enriched phenotypes lead to early (embryonic, pre- and postnatal or preweaning) lethality while the phenotypes in the non-singleton group appear less likely to lead to this early lethality. Furthermore, genes from simulated variants tend to have higher overlaps than those from singleton or non-singleton SNVs. 
+The phenotype enrichment analysis showed, that in the simulated and singleton groups most of the most significantly enriched phenotypes lead to early (embryonic, pre- and postnatal or preweaning) lethality while the phenotypes in the non-singleton group appear less likely to lead to this early lethality. Furthermore, genes from simulated variants tend to have higher overlaps than those from singleton or non-singleton SNVs.
 
 ## Relative positions of simulated and observed SNVs
 
@@ -157,22 +149,16 @@ mean_relPos_obs <- mean(filter(observed_simulated, flag == "observed")$relcDNApo
 mean_relPos_sim <- mean(filter(observed_simulated, flag == "simulated")$relcDNApos)
 ```
 
-
 To see where deleterious SNVs are located on the individual genes, the relative cDNA positions of observed and simulated stop-gains have been plotted.
 
 ::: {#fig-positions}
+![](/img/position_ridges.png)
 
-![](img/position_ridges.png)
+![](/img/relcDNA_phred40.png)
 
-![](img/relcDNA_phred40.png)
-
-**(a)** Distribution of the stop-gains in different Phred groups. **(b)**
-Relative cDNA positions of stop-gains with Phred scores above 40 that have been observed (red) or simulated (blue). 
+**(a)** Distribution of the stop-gains in different Phred groups. **(b)** Relative cDNA positions of stop-gains with Phred scores above 40 that have been observed (red) or simulated (blue).
 :::
 
-Figure 3a shows that stop gains with a lower Phred score tend to have a lower relative cDNA postion, meaning they are located closter to the start of a gene. In figure 3b it can be seen that the distribution of the observed variants roughly follows the distribution of the simulated ones. However, while the simulated variants appear to be normally distributed around their mean of `r round(mean_relPos_sim, 2)` while the observed variants have a slightly lower mean (`r round(mean_relPos_obs, 2)`) and a distribution with a plateau around 0.25. 
-
+Figure 3a shows that stop gains with a lower Phred score tend to have a lower relative cDNA position, meaning they are located closer to the start of a gene. In figure 3b it can be seen that the distribution of the observed variants roughly follows the distribution of the simulated ones. However, while the simulated variants appear to be normally distributed around their mean of `r round(mean_relPos_sim, 2)` while the observed variants have a slightly lower mean (`r round(mean_relPos_obs, 2)`) and a distribution with a plateau around 0.25.
 
 # References
-
-

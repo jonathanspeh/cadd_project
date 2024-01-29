@@ -1,0 +1,194 @@
+---
+title: "Report"
+author: "Jonathan Speh"
+format:
+  docx:
+    toc: false
+    reference-doc: report_ref.docx
+  html: 
+    toc: false
+  pdf: 
+    toc: false
+    pdf-engine: pdflatex
+engine: knitr
+execute: 
+  cache: true
+  echo: false
+  output: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+
+library(knitr)
+library(flextable)
+options(scipen = 10000)
+```
+
+# Introduction
+
+Since the introduction of Sanger sequencing, almost 50 years ago, the field of DNA sequencing has made enormous technical advances. Massive parallel DNA sequencing techniques such as Illumina can sequence a human genome within a few days, and more recent methods for long-read sequencing such as PacBio or Oxford Nanopore sequencing allow easier *de novo* assembly while increasing availability and portability of sequencing techniques [@shendure2017]. The relative technical ease of sequencing humane genomes stands opposed to the continuous challenge of interpreting genetic variation. Analyses of the 1000 Genomes Project revealed that an individual has - depending on their ancestry - between 4.1 and 5 million Variants compared to the reference genome. Most of these Variants were Single Nucleotide Variants (SNVs) or short insertions and deletions (indels), they tend to be located in the non-coding genome, and up to 200 000 Variants per individual had allele frequencies below 0.5% [@auton2015]. All of this illustrates that accurately distinguishing neutral (or even beneficial) variants from malignant variants that cause or increase risks for diseases is not a trivial task, which currently still limits the clinical utility of whole genome sequencing technologies [@lappalainen2021; @shendure2017]. Several methods to approach the challenge of predicting the effects of genetic variants have been developed. However, the use of such tools is often constrained by their limited scope on for example the coding genome [@brandes2023; @cheng2023], splice Sites [@jaganathan2019], or specific regulatory sites [@sample2019]. An alternative approach to the problem of estimating the effect of genetic variants is the Combined Annotation-Dependent Depletion (CADD) Framework, introduced by @kircher2014 . Instead of trying to predict direct molecular effects of genetic variants, CADD uses the predicted deleteriousness, I.e. an evolutionary measure of reduced fitness, of a variant as an indicator for pathogenicity. The method is based on the assumption, that alleles that can be observed at high frequencies (\>95%) in humans but don't exist in the human-chimpanzee ancestral genome are neutral or benign while simulated variants contain a significant number of deleterious variants that in reality would be removed by purifying selection. At the core of the CADD framework is a linear regression model, that was trained to use a large set of more than 100 annotations to distinguish the observed (proxy-neutral) from the simulated (proxy-deleterious) variants [@kircher2014]. Based on the annotations, the model computes a score (raw CADD score) that indicates how likely a variant belongs to the proxy-neutral or the proxy-deleterious class. After training, the model was applied to compute raw CADD scores for all theoretically possible SNVs in the human genome. To improve comparability of the results, the raw CADD score has then been scaled onto a Phred (-10 log~10~) scale from 0 to 99 where a score of 10 indicates a variant being amongst the top 10% with the highest predicted deleteriousness, while a score of 20 indicates the top 1% etc. [@kircher2014; @rentzsch2019]. Since its introduction, CADD has frequently been updated to incorporate the updated reference genome (GRCh38) and to improve its predictive performance [@rentzsch2019; @rentzsch2021; @schubach2024]. The model has been used in various research projects and has been found to be especially useful in prioritizing variants of unknown significance [@bongaerts2022; @tollefson2023].
+
+Single Nucleotide Variants can have different molecular consequences. Depending on their location and the kind of substitution they can for example affect regulatory sites and splices sites or they can lead to changes in protein coding regions where they might result in loss or gain of stop codons or changes in the amino acid sequence. @kircher2014 found, that variants with a lower Phred score tend to be located in the non-coding regions of the genome, while variants with a higher score are more often located in protein-coding genes. At a Phred above 40, virtually all variants were stop-gains (nonsense mutations). Since stop-gain mutations often lead to a loss of function of a gene by nonsense-mediated mRNA decay or by synthesis of truncated proteins, this prediction appears to be biologically plausible. However, the SNVs that CADD predicts to be highly deleterious have not been further investigated to date. Thus, it is unknown which of these variants have been observed before and if they are known to be associated with phenotypes or diseases. This project aimed to address the questions of which of the SNVs with a Phred score of at least 40 have previously been observed and what distinguishes the observed variants from those that were only simulated. For this, the Genome Aggregation Database (GnomAD) [@karczewski2020] has been used to identify observed SNVs with a PHRED above 40. Identified variants with the highest allele frequencies have been further investigated using additional databases as well as literature research. Furthermore, gene ontology and phenotype enrichment analyses have been performed to compare genes that are affected by observed stop gains with those that are affected by the simulated stop gains. Lastly, the relative positions of stop-gains on their respective genes have been compared. The analysis showed that approximately 10% of the SNVs with Phred above 40 were found in GnomAD. The observed variants with high allele frequencies seemed to be neutral and simulated but not observed variants were more strongly associated with pathogenic effects than those that were observed. The results highlight that while CADD's use of deleteriousness as an indicator of pathogenicity is a good approach for prioritizing large sets of candidate variants, individual SNVs might be misclassified when using a defined threshold for binary classification of variants.
+
+# Methods
+
+## Identification of observed SNVs
+
+To identify SNVs with a PHRED above 40 that have been observed in the GnomAD database, CADD v1.6 pre-scored Variants \[available here: <https://cadd.bihealth.org/download>\] have been filtered for a Phred score of greater or equal than 40. GnomAD release 4.0 Exome data have been retrieved from <https://gnomad.broadinstitute.org/downloads>. Variants that did not pass die GnomAD quality control filters were removed and only SNVs were retained.
+
+For each variant, a unique identifier consisting of chromosome, position, reference allele, and alternative allele was generated. This identifier was then used to identify observed variables by computing the overlap between the two datasets so that all CADD variants that were also found in the GnomAD dataset were retained.
+
+Filtering of the CADD and GnomAD datasets and generation of the overlap has been performed using the BASH command line interpreter. Subsequent data manipulation and analysis were performed using R version 4.2.2 [@base] and the packages data.table version 1.14.8 [@data.table] as well as dplyr version 1.1.4, tidyr version 1.3.0, stringr version 1.5.1 and ggplot2 version 3.4.4 provided by the tidyverse metapackage [@tidyverse].
+
+Variants can be annotated using different gene models leading to duplicated variants that are differentially annotated in the CADD dataset. However, the CADD output contains only the highest score for each variant without indicating which annotation the score is based on. To account for this, a three-step filtering strategy was used to ensure that only unique variants were retained. Firstly, for each variant, the annotation with the highest ConsScore was prioritized. The ConScore is a score from 0 to 8 which is based on the assumption that some types of consequences (such as stop-gain, non-synonymous base exchange, variants in splice sites) tend to be more deleterious than others (such as synonymous or intergenic exchanges) \[assignment of ConScore: <https://github.com/kircherlab/CADD-scripts/blob/master/src/scripts/lib/Annotations.py#L175>\]. The score is returned as one of the CADD annotations, it is however not used in the model itself. Secondly, variants that occur earlier in a gene (have a smaller relative cDNA position) have been prioritized over those that appear later. Lastly, duplicates that could not be resolved by the aforementioned methods were resolved by random selection.
+
+## Analysis of Variants with the highest allele frequencies
+
+From Variants that were observed in GnomAD, the five variants with the highest allele frequencies were selected for further literature research. Relevant literature that might explain the consequences of the variants was identified using the LitVar2 text mining tool [@allot2023] Furthermore, the ClinVar Database [@landrum2020] was used to search for the clinical significance of the variance, and OMIM [@hamosh2005] was used to investigate phenotypes/diseases that are associated with genes that are affected by the variants.
+
+## Enrichment Analysis
+
+Gene ontology and phenotype enrichment analysis have been performed with the enrichr gene set analysis tool [@xie2021] using the enrichR package [@enrichR]. For the gene ontology (GO) enrichment analysis, two gene lists have been created based on the variants with a PHRED of at least 40. One list contained genes that were observed more than once in GnomAD while the other one contained genes derived from simulated variants not found in GnomAD. For the phenotype enrichment analysis, a third gene list containing genes where singleton variants were found on. The used databases were GO_Biological_Process_2023 and MGI_Mammalian_Phenotype_Level_4_202 for gene ontology and phenotype enrichment analysis respectively. Terms with a Benjamini-Hochberg corrected P-value of 0.05 or lower were considered significantly enriched. Redundant GO terms were reduced based on semantic similarities using the rrvgo package [@rrvgo] to first compute a similarity matrix of the GO terms and then to reduce the terms in the matrix using -log10 transformed adjusted p-value as weights and a threshold of 0.7.
+
+## Analysis of relative cDNA positions
+
+To identify where on the genes deleterious stop gains are most often located, the distribution of the relative cDNA position of observed and simulated stop-gains with Phred scores below and above 40 was plotted using the geom_density function provided by ggplot2 using default parameters.
+
+# Results
+
+```{r}
+#| include: false
+#| cache: false
+library(data.table)
+library(dplyr)
+
+all_phred40_snvs <- fread("processed_data/all_phred40.csv")
+overlap_phred40 <- fread("processed_data/overlap_phred40_unique_parsed.csv")
+
+n_phred40 <- nrow(all_phred40_snvs)
+n_observed <- nrow(overlap_phred40)
+```
+
+A total of `r format(n_phred40, big.mark = " ")` variants on the autosomes had a PHRED score of at least 40. Of those variants, `r n_observed` (`r sprintf("%0.1f%%", n_observed/n_phred40 * 100)`) were found in the GnomAD database.
+
+Almost all variants (`r nrow(filter(overlap_phred40, Consequence == "STOP_GAINED"))`) were stop-gains, while only `r nrow(filter(overlap_phred40, Consequence == "NON_SYNONYMOUS"))` non-synonymous, `r nrow(filter(overlap_phred40, Consequence == "INTRONIC"))`, intronic, `r nrow(filter(overlap_phred40, Consequence == "SPLICE_SITE"))` splice site, `r nrow(filter(overlap_phred40, Consequence == "REGULATORY"))` regulatory, and `r nrow(filter(overlap_phred40, Consequence == "3PRIME_UTR"))` one Variant in the 3' UTR were identified. The majority of the observed SNVs (`r sprintf("%0.1f%%", nrow(filter(overlap_phred40, AC == 1))/n_observed * 100)`) are singletons (I.e. they have only been observed once). Only `r format(nrow(filter(overlap_phred40, AF >= 0.01)), big.mark = " ")` variants had an allele frequency (AF) of at least 1% (i.e. are not rare variants). Interestingly, three variants with an AF greater than 50% were found in the observed data. Table 1 shows an overview of the identified SNVs with the highest allele frequencies.
+
+:::{#tbl-one}
+
+```{r}
+
+overlap_phred40 |>
+  slice_max(AF, n = 5) |>
+  select(Chrom, Pos, Ref, Alt, PHRED, "Gene" = GeneName, AF) |> 
+#  kable(align = "lllllll") |>
+  flextable() |>
+  theme_booktabs(bold_header = TRUE) |>
+  align(align = "left", part = "all") |>
+  italic(j = "Gene") |> 
+  flextable::colformat_num(j = 2, big.mark = "") |>
+  
+  #set_header_labels(Chrom = "Chromosome", Pos = "Position", 
+  #          Ref = "Reference", Alt = "Alternative", PHRED = "PHRED", GeneName = "Gene", 
+  #          AF = "Allele Frequency") |>
+  fontsize(size = 10)
+
+   
+
+```
+
+SNVs with a Phred above 40 that had the highest allele frequencies in GnomAD. 
+
+:::
+
+## Literature research of variants with high allele frequencies
+
+### 1-171208951-C\>T (rs6661174)
+
+The observed SNV with the highest allele frequency was rs6661174. It leads to a premature stop codon on exon 9 of *FMO2*, a gene coding for Flavin Containing Dimethylaniline Monooxygenase 2. The alternative allele (T-allele) has an overall AF of `r round(arrange(overlap_phred40, desc(AF))$AF[1], 2)`. It has allele frequencies of or close to 0 (100%) throughout all GnomAD ancestry groups except African / African American where the frequency is only 0.88. The T allele leads to *FMO2* loss of function while the ancestral C allele leads to a functional allele. A study by @veeramah2008 found high frequencies of the C allele in the population of sub-Saharan Africa where approximately one-third was at least heterozygote, but could not find evidence for selective pressure on either allele. In contrast, @mekonnen2017 propose that in specific African populations, the persistence of the functional allele can be explained by its association with reduced Tuberculosis disease activity.
+
+**For Discussion: C allele does not segregate together with known TB risk alleles**
+
+-   Problem - do the risk alleles have a molecular effect?
+-   If so –\> might they be actually responsible for the observed reduced TB?
+    -   Relevant section marked in paper
+
+### 5-75669297-G\>A (rs34358)
+
+This variant is a stop-gain in *ANKDD1B*, coding for Ankyrin Repeat And Death Domain Containing 1B. The alternative A allele is the major allele in all GnomAD ancestry groups except South Asian and East Asian where it has AFs of 0.44 and 0.35 respectively. The variant has been described as a risk allele for type 2 diabetes and dyslipidemia [@vujkovic2020] and as a protective allele for migraine without aura [@zhang2022], however no studies investigating the evolutionary history of the allele and no evidence for a deleterious effect (like a pathogenic effect with early onset and high penetrance) could be found.
+
+### 1-54716627-T\>A (rs1147990)
+
+This variant has an overall frequency of 0.55. It is most frequent in the East Asian (0.98) and South Asian (0.72) ancestry groups. Although being annotated as stop gain in *MROH7-TTC4* by CADD v1.6, the variant is located in a read-trough transcript between *MROH7* and *TTC4,* two neighboring genes. Multiple variants of the transcript can arise from alternative splicing, however, they are likely degraded by nonsense-mediated decay and do not encode any protein. In CADD v1.7 which uses updated Ensemble annotations, the transcript is no longer annotated as a coding gene. With that change, the variant's PHRED score was markedly reduced to 19.97.
+
+### 7-21543345-G\>T (rs2285943)
+
+Rs2285943 is predicted to result in a stop gain on exon 1/82 of *DNAH11.* The variant is common (AFs 0.29 - 0.55) throughout all GnomAD ancestry groups. It is known that DNAH11 loss of function leads to Primary Ciliary Dyskineasia [@bartoloni2002; @lai2016; @schwabe2008], however, multiple ClinVar submissions indicated that rs2285943 is not linked to that condition.
+
+\*\*For discussion\*\*
+
+-   Genome Browswer shows alternative promotor just downstream of variant
+-   alt promotor: <https://genome.ucsc.edu/cgi-bin/hgc?hgsid=1885897182_19ARA0SsykGacZ7HT0dy80zu9yoK&db=hg38&c=chr7&l=21543005&r=21547379&o=21543345&t=21543495&g=knownAlt&i=altPromoter>
+-   Range: [chr7:21543346-21543495](https://genome.ucsc.edu/cgi-bin/hgTracks?hgsid=1885897182_19ARA0SsykGacZ7HT0dy80zu9yoK&db=hg38&position=chr7%3A21543346-21543495)
+
+### 19-48703417-G\>A (rs601338)
+
+The fifth of the selected variants leads to a loss of function in *FUT2.* With allele frequencies between 0.30 in Admixed Americans and 0.52 in Middle Easterns, it is common in most ancestry groups. However, the variant is rare in East Asians (AF 0.002). The variant affects the function of the alpha(1,2)fucosyltransferase which is responsible for secretion of ABO antigens. Carriers of a functional *FUT2* allele secrete these antigens in their bodily fluids while homozygous or compound heterozygous carriers of non-functional FUT2 (for example caused by rs601338) do not secret the antigens. The secretor phenotype (secretor polymorphism) seems to be associated as both, a risk or a protective factor, with numerous conditions and diseases [@krog2023; @mottram2017].
+
+## Enrichment analysis
+
+```{r}
+
+GOBP_observed <- fread("processed_data/GOBP_observed.csv")
+GOBP_observed_reduced <- fread("processed_data/GOBP_observed_reduced.csv")
+
+GOBP_simulated <- fread("processed_data/GOBP_simulated.csv")
+GOBP_simulated_reduced <- fread("processed_data/GOBP_simulated_reduced.csv")
+
+PT_simulated <- fread("processed_data/pte_simulated.csv")
+PT_singletons <- fread("processed_data/pte_singleton.csv")
+PT_non_singletons <- fread("processed_data/pte_non_singleton.csv")
+```
+
+Gene ontology enrichment analysis revealed `r nrow(GOBP_observed)` significantly enriched biological processes for the genes that contained observed SNVs, resulting in `r max(GOBP_observed_reduced$cluster)` clusters with semantically distinct functions. Analysis of the gene list derived simulated but not observed SNVs yielded `r nrow(GOBP_simulated)` enriched terms in `r max(GOBP_simulated_reduced$cluster)` distinct clusters. Figure 1 shows the enriched clusters for both groups.
+
+::: {#fig-treemaps}
+![](/img/Fig1.png)
+
+Treemaps of the biological processes that are enriched in gene lists derived from observed (left) and simulated (right) variants. The treemaps reflect the hierarchical nature of gene ontology terms by grouping terms that were found to be semantically similar under a parent term. The size of the rectangles indicates the negative log10 adjusted p-value.
+:::
+
+Genotype enrichment analysis showed that genes with observed SNVs with a Phred over 40 tend to be involved in processes that affect cell and tissue morphology (extracellular structure organization and intermediate filament organisation, cell-matrix adhesion), cation transport, and metabolic processes (fatty acid metabolic process, proteolysis, glycerophospholipid biosynthetic processes). The genelist from the simulated SNVs on the other hand was mainly enriched for processes that regulate gene expression, cell proliferation, and differentiation or are involved in cellular signalling.
+
+The phenotype enrichment analysis revealed `r nrow(PT_simulated)`, `r nrow(PT_singletons)`, and `r nrow(PT_non_singletons)` significantly enriched terms for the gene lists derived from simulated, singleton and non-singleton SNVs respectively. The 10 most significantly enriched terms (lowest adjusted P-value) are shown in Figure 2.
+
+::: {#fig-pte}
+![](/img/plot-pte-facet-1.png)
+
+The ten most significantly enriched phenotypes for genes on which simulated, singleton, and non-singleton SNVs with Phred scores above 40 are found. The colour of the bars represents the statistical significance as negative log10 adjusted P-value and the bars show the fraction of genes found in the respective gene lists compared to all genes that map to the phenotype.
+:::
+
+The phenotype enrichment analysis showed, that in the simulated and singleton groups most of the most significantly enriched phenotypes lead to early (embryonic, pre- and postnatal or preweaning) lethality while the phenotypes in the non-singleton group appear less likely to lead to this early lethality. Furthermore, genes from simulated variants tend to have higher overlaps than those from singleton or non-singleton SNVs.
+
+## Relative positions of simulated and observed SNVs
+
+```{r}
+observed_simulated <- fread("processed_data/observed_simulated.csv") |> filter(PHRED >= 40)
+
+mean_relPos_obs <- mean(filter(observed_simulated, flag == "observed")$relcDNApos)
+
+mean_relPos_sim <- mean(filter(observed_simulated, flag == "simulated")$relcDNApos)
+```
+
+To see where deleterious SNVs are located on the individual genes, the relative cDNA positions of observed and simulated stop-gains have been plotted.
+
+::: {#fig-positions}
+![](/img/Fig3.png)
+
+**(a)** Distribution of the stop-gains in different Phred groups. **(b)** Relative cDNA positions of stop-gains with Phred scores above 40 that have been observed (red) or simulated (blue).
+:::
+
+Figure 3a shows that stop gains with a lower Phred score tend to have a lower relative cDNA position, meaning they are located closer to the start of a gene. In figure 3b it can be seen that the distribution of the observed variants roughly follows the distribution of the simulated ones. However, while the simulated variants appear to be normally distributed around their mean of `r round(mean_relPos_sim, 2)` while the observed variants have a slightly lower mean (`r round(mean_relPos_obs, 2)`) and a distribution with a plateau around 0.25.
+
+# References

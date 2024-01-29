@@ -5,6 +5,8 @@ format:
   docx:
     df-print: paged 
     tbl-cap-location: top
+  pdf: 
+    toc: false
 engine: knitr
 execute: 
   cache: true
@@ -17,28 +19,24 @@ bibliography: references.bib
 
 ## Identification of observed SNVs
 
-To identify SNVs with a PHRED above 40 that have been observed in the GnomAD database, CADD v1.6 pre-scored Variants (available here: <https://cadd.bihealth.org/download>) have been filtered for a Phred score of greater or equal than 40. GnomAD release 4.0 Exome data have been retrieved from <https://gnomad.broadinstitute.org/downloads>. Variants that did not pas die GnomAD quality control filters were removed and only SNVs were retained.
+To identify SNVs with a PHRED above 40 that have been observed in the GnomAD database, CADD v1.6 pre-scored Variants [available here: <https://cadd.bihealth.org/download>] have been filtered for a Phred score of greater or equal than 40. GnomAD release 4.0 Exome data have been retrieved from <https://gnomad.broadinstitute.org/downloads>. Variants that did not pass die GnomAD quality control filters were removed and only SNVs were retained.
 
-For each variant, a unique identifier consisting of chromosome, position, reference allele and alternative allele was generated. This identifier was then used to identify observed Variants by computing the overlap between the two datasets so that all CADD variants that were also found in the GnomAD dataset were retained.
+For each variant, a unique identifier consisting of chromosome, position, reference allele, and alternative allele was generated. This identifier was then used to identify observed variables by computing the overlap between the two datasets so that all CADD variants that were also found in the GnomAD dataset were retained.
 
-Filtering of the CADD and GnomAD datasets and generation of the overlap has been performed using the BASH command line interpreter. Subsequent data manipulation and analysis was performed using R version 4.2.2 [@base] and the packages data.table [@data.table] , dplyr [@dplyr] , tidyr [@tidyr] and stringr [@stringr], and ggplot2 [@ggplot2] was used for plotting data.
+Filtering of the CADD and GnomAD datasets and generation of the overlap has been performed using the BASH command line interpreter. Subsequent data manipulation and analysis were performed using R version 4.2.2 [@base] and the packages data.table [@data.table] , dplyr [@dplyr] , tidyr [@tidyr] and stringr [@stringr], and ggplot2 [@ggplot2] was used for plotting data.
 
-Variants can be annotated using different gene models leading to duplicated variants that are differentially annotated in the CADD dataset. However, the CADD output contains only the highest score for each variant without indicating which annotation the score is based on. To account for this, a three step filtering strategy was used to ensure that only unique variants where retained. Firstly, for each variant, the annotation with the highest ConsScore was prioritized. The ConScore is a score from 0 to 8 which is based on the assumption that some types of consequences (such as stop-gain, non-synonymous base exchange, variants in splice sites) tend to be more deleterious than others (such as synonymous or intergenic exchanges).
-
-**ADD CONSCORE TO SUPPLEMENT? Move some of this to discussion?**
-
-The score is returned as one of the CADD annotations, it is however not used in the model itself. Secondly, variants that occur earlier in a gene (have a smaller relative cDNA position) have been prioritized over those that appear later. Lastly, duplicates that could not be resolved by the aforementioned methods were resolved by random selection.
+Variants can be annotated using different gene models leading to duplicated variants that are differentially annotated in the CADD dataset. However, the CADD output contains only the highest score for each variant without indicating which annotation the score is based on. To account for this, a three-step filtering strategy was used to ensure that only unique variants were retained. Firstly, for each variant, the annotation with the highest ConsScore was prioritized. The ConScore is a score from 0 to 8 which is based on the assumption that some types of consequences (such as stop-gain, non-synonymous base exchange, variants in splice sites) tend to be more deleterious than others (such as synonymous or intergenic exchanges) \[assignment of ConScore: <https://github.com/kircherlab/CADD-scripts/blob/master/src/scripts/lib/Annotations.py#L175>\]. The score is returned as one of the CADD annotations, it is however not used in the model itself. Secondly, variants that occur earlier in a gene (have a smaller relative cDNA position) have been prioritized over those that appear later. Lastly, duplicates that could not be resolved by the aforementioned methods were resolved by random selection.
 
 ## Analysis of Variants with the highest allele frequencies
 
-From Variants that were observed in GnomAD, the five variants with the highest allele frequencies were selected for further literature research. Relevant literature that might explain consequences of the variants were identified using the LitVar2 text mining tool [@allot2023].
+From Variants that were observed in GnomAD, the five variants with the highest allele frequencies were selected for further literature research. Relevant literature that might explain the consequences of the variants was identified using the LitVar2 text mining tool [@allot2023] Furthermore, the ClinVar Database [@landrum2020] was used to search for the clinical significance of the variance, and OMIM [@hamosh2005] was used to investigate phenotypes/diseases that are associated with genes that are affected by the variants.
 
 ## Enrichment Analysis
 
-Gene ontology and phenotype enrichment analysis have been performed with the enrichr gene set analysis tool [@xie2021] using the enrichR package [@enrichR]. For the geneontology (GO) enrichment analysis, two gene lists have been created based on the variants with a PHRED of at least 40. One list contained genes that were observed more than once in GnomAD while the other on contained genes derived from simulated variants not found in GnomAD. For the phenotype enrichment analysis, a third gene list containing genes where singleton variants were found on. The used databases were GO_Biological_Process_2023 and MGI_Mammalian_Phenotype_Level_4_202 for geneontology and phenotype enrichement analysis respectively. Terms with an Benjamini-Hochberg corrected P-value of 0.05 or lower was considered statically significant enriched. Redundant GO terms were reduced based on semantic similarities using the rrvgo package [@rrvgo] to first compute a similarity matrix of the GO terms and then to reduce the terms in the matrix using -log10 transformed adjusted p-value as weights and a threshold of 0.7.
+Gene ontology and phenotype enrichment analysis have been performed with the enrichr gene set analysis tool [@xie2021] using the enrichR package [@enrichR]. For the gene ontology (GO) enrichment analysis, two gene lists have been created based on the variants with a PHRED of at least 40. One list contained genes that were observed more than once in GnomAD while the other one contained genes derived from simulated variants not found in GnomAD. For the phenotype enrichment analysis, a third gene list containing genes where singleton variants were found on. The used databases were GO_Biological_Process_2023 and MGI_Mammalian_Phenotype_Level_4_202 for gene ontology and phenotype enrichment analysis respectively. Terms with a Benjamini-Hochberg corrected P-value of 0.05 or lower were considered significantly enriched. Redundant GO terms were reduced based on semantic similarities using the rrvgo package [@rrvgo] to first compute a similarity matrix of the GO terms and then to reduce the terms in the matrix using -log10 transformed adjusted p-value as weights and a threshold of 0.7.
 
 ## Analysis of relative cDNA positions
 
-To identify where on the genes deleterious stop gains are most often located, the distribution of the relative cDNA position of observed and simulated stop-gains with Phred scores below and above 40 was plotted using the geom_density function provided by ggplot2 using default parameters.
+1.  To identify where on the genes deleterious stop gains are most often located, the distribution of the relative cDNA position of observed and simulated stop-gains with Phred scores below and above 40 was plotted using the geom_density function provided by ggplot2 using default parameters.
 
 # References

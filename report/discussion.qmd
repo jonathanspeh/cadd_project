@@ -1,0 +1,36 @@
+---
+title: "Discussion"
+author: "Jonathan Speh"
+format:
+  docx:
+    toc: false
+    reference-doc: report_ref.docx
+  html: 
+    toc: false
+  pdf: 
+    toc: false
+    pdf-engine: pdflatex
+engine: knitr
+execute: 
+  cache: true
+  echo: false
+  output: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+
+library(knitr)
+library(flextable)
+options(scipen = 10000)
+```
+
+# Discussion
+
+
+
+
+
+
+
