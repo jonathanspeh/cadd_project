@@ -28,9 +28,41 @@ options(scipen = 10000)
 
 # Discussion
 
+The project revealed an overlap between the deleterious CADD SNVs and the GnomAD Exom data of only about 10%. Furthermore, the observed variants were almost exclusively singletons or rare variants. These finding indicate that the variants that CADD predicts to be highly deleterious tend in fact to be under purifying selection and are thus rare (or potentially absent) in the population.
+
+**Something more here??**
+
+However, a small number of common variants, i.e. variants that are not removed by purifying selection, was classified as deleterious by CADD. Amongst the five variants with the highest allele frequencies, two variants (rs6661174 on *FMO2* and rs601338 on *FUT2*) had clear molecular effects described in the relevant literature as they both lead to loss of function of their respective genes. Since these variants persist at high frequencies they cannot lead to a deleterious phenotype. In the case of rs6661174, the reference allele is almost exclusively observed in sub-Saharan Africa while all other ancestry groups are homozygous for the alternative allele. @veeramah2008 explain this with the emergence of the variant before the migration of humans out of Africa, an evolutionary bottleneck that is responsible for the large genetic diversity in Africa compared to all other populations [@campbell2008]. The persistence of the variant since then indicates that it is at least evolutionary neutral.
+
+```{comment}
+
+*(Carrying of a functional FMO2 variant appears to be associated with increased thiourea toxicity, an compound found in industrial products and pharmaceuticals [@mekonnen2017; @veeramah2008]. However, since the non-functional variant has persisted in the non-african populations long before the emergence of such compounds, this is not a sufficient explanation)*
+
+```
+
+For rs601338, both alleles appear frequently in most populations. The variant is one of several common variants that lead to *FUT2* loss of function [@ferrer-admetlla2009]. As mentioned before, the *FUT2* genotype affects the ability to secrete AB0 Antibodies and is consequently relevant for immune defence against pathogens. While it is known that the secretor phenotype has relevant impact on host-pathogen interactions, the consequence of this interaction is pathogen specific and can depending on the pathogen be either beneficial or disadvantageous [@mottram2017; @wacklin2011]. A study by @ferrer-admetlla2009 highlights, that due to the strong evolutionary pressure of pathogen-host interaction, SNVs on *FUT2* such as the one that was observed here, are subject of balancing selection. Similarly, @tennessen2012 observed that genes responsible for immune function are amongst the genes with the highest nucleotide diversity.
+
+In contrast to the aforementioned variants, rs2285943 is located on a gene that has a clear association to a mendelian disease as homozygotes or compound heterozygotes with non-functional *DNAH11* are affected by Primary Cilliary Dyskinesia Type 7 (CILD7) \[OMIM accession: #611884\] [@bartoloni2002; @lai2016; @schwabe2008]. However, rs2285943 is not described as causal variant for CILD7 and the variant is annotated as benign in ClinVar. An explanation for this might be an alternative promoter on DNAH11 that can be found in the UCSC Genome Browser [@raney2024]. The promoter is located on position chr7:21543346-21543495 (GRCh38), which means it is just downstream of the variant described here.
+
+The last of the true stop gains that were looked at in detail here was rs34358. The variant, which is located on *ANKDD1B* is associated with both disease risk and protection. However, unlike the aforementioned variant on *FUT2* which affects susceptibility to infectious diseases, rs34358 is associated with conditions such as migraine, type 2 diabetes and dyslipidemia [@vujkovic2020; @zhang2022]. However, these are common disorders that appear later in live which makes them unlikely to be responsible for strong selective pressure [@blekhman2008]. Furthermore, the UCSC Genome Browser indicates that the variant is located on a cassete exon, i.e. an exon that is not retained in all transcripts, which might further reduce the effect of the variant.
+
+```{comment}
+here something about evolutionary leftovers (whats the proper term????) - adaptations to past environments
+
+```
+
+The database and literature analysis of the variants with high allele frequencies revealed several potential mechanisms that could be responsible for the misclassification of common (thus likely neutral) variants as deleterious. The most obvious mechanism here was the incorrect ENSEMBL annotation seen at rs1147990. Since stop gains tend to be the most deleterious SNVs, the annotation as stop gain has a large influence on CADD's prediction. A similar mechanism might have influenced the high score of rs2285943 and rs34358. While these SNVs are in fact a stop gains on protein coding genes, the alternative promoter and the cassete exome might mask the variants effect thereby reducing their deleteriousness.
+
+The probably most important explanation for the misclassification is however, that CADD cannot (and is not designed to) predict pathogenicity of a variant. At least two of the five selected variants (rs6661174 and rs601338) have clear molecular effects and lead to loss of function of their respective genes. However, in both cases the gene products are not essential for survival and reproduction and thus not under purifying selection.
+
+**Some nice transition here**
 
 
 
+```{comment}
 
+For Enrichment analysis:
 
+"When genes were grouped into functional categories by KEGG (Kyoto Encyclopedia of Genes and Genomes) pathway, estimates of π were highest for pathways related to immune function and olfaction and lowest for pathways involved in basic cellular processes (fig. S16)." pi = nucleotide diversity on a gene), from @tennessen2012
 
+```

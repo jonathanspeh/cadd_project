@@ -7,9 +7,7 @@ format:
     reference-doc: report_ref.docx
   html: 
     toc: false
-  pdf: 
-    toc: false
-    pdf-engine: pdflatex
+  pdf: default
 engine: knitr
 execute: 
   cache: true
