@@ -92,7 +92,7 @@ This variant has an overall frequency of 0.55. It is most frequent in the East A
 
 ### 7-21543345-G\>T (rs2285943)
 
-Rs2285943 is predicted to result in a stop gain on exon 1/82 of *DNAH11.* The variant is common (AFs 0.29 - 0.55) throughout all GnomAD ancestry groups. It is known that DNAH11 loss of function leads to Primary Ciliary Dyskineasia [@bartoloni2002; @lai2016; @schwabe2008], however, multiple ClinVar submissions indicated that rs2285943 is not linked to that condition.
+Rs2285943 is predicted to result in a stop gain on exon 1/82 of *DNAH11.* The variant is common (AFs 0.29 - 0.55) throughout all GnomAD ancestry groups. It is known that *DNAH11* loss of function leads to Primary Ciliary Dyskineasia [@bartoloni2002; @lai2016; @schwabe2008], however, multiple ClinVar submissions indicated that rs2285943 is not linked to that condition.
 
 \*\*For discussion\*\*
 
@@ -122,7 +122,9 @@ PT_non_singletons <- fread("processed_data/pte_non_singleton.csv")
 Gene ontology enrichment analysis revealed `r nrow(GOBP_observed)` significantly enriched biological processes for the genes that contained observed SNVs, resulting in `r max(GOBP_observed_reduced$cluster)` clusters with semantically distinct functions. Analysis of the gene list derived simulated but not observed SNVs yielded `r nrow(GOBP_simulated)` enriched terms in `r max(GOBP_simulated_reduced$cluster)` distinct clusters. Figure 1 shows the enriched clusters for both groups.
 
 ::: {#fig-treemaps}
-![](/img/plot-ea-bp-1.png) ![](/img/plot-ea-bp-2.png)
+![](/img/plot-ea-bp-1.png) 
+
+![](/img/plot-ea-bp-2.png)
 
 Treemaps of the biological processes that are enriched in gene lists derived from observed (left) and simulated (right) variants. The size of the rectangles indicates the negative log10 adjusted p-value.
 :::
