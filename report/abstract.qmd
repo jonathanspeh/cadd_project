@@ -1,0 +1,29 @@
+---
+title: "Abstract"
+author: "Jonathan Speh"
+format:
+  docx:
+    toc: false
+    reference-doc: report_ref.docx
+  html: 
+    toc: false
+  pdf: 
+    toc: false
+    pdf-engine: pdflatex
+engine: knitr
+execute: 
+  cache: true
+  echo: false
+  output: true
+bibliography: references.bib
+---
+
+# Abstract
+
+**Background:** Assessing the effect of genetic variants is currently the largest challenge in the application of next-generation sequencing in clinical settings. One approach to this challenge is the Combined Annotation-Dependent Depletion (CADD) framework which predicts the deleteriousness of variants based on a large number of annotations. Here, the 0.01% of all theoretically possible single nucleotide variants (SNVs) that CADD scored to be most deleterious were analysed to understand which of those variants were observed in the population and what distinguishes observed variants from those that were only simulated.
+
+**Methods:** The gnomAD database was used to identify observed SNVs from the CADD-scored data. Literature research was performed for the SNVs with the highest allele frequency, and gene enrichment analysis was used for functional analysis of observed and only simulated variants. Furthermore, a comparison of the relative position of observed and simulated SNVs on their genes was made.
+
+**Results:** Approximately 10% of SNVs that CADD predicts to be highly deleterious were observed in gnomAD. This included a few common variants which due to different mechanisms were misclassified as deleterious by CADD. Observed variants appear to be less strongly associated with basic cellular processes and lethal phenotypes than only simulated SNVs.
+
+**Conclusion:** Most SNVs that CADD predicts to be highly deleterious appear not or only rarely in the population, but several observed cases where CADD overestimated the deleteriousness highlight that additional measures to directly estimate pathogenicity could improve the assessment of unknown variants.

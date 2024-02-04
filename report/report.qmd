@@ -24,6 +24,16 @@ library(flextable)
 options(scipen = 10000)
 ```
 
+# Abstract
+
+**Background:** Assessing the effect of genetic variants is currently the largest challenge in the application of next-generation sequencing in clinical settings. One approach to this challenge is the Combined Annotation-Dependent Depletion (CADD) framework which predicts the deleteriousness of variants based on a large number of annotations. Here, the 0.01% of all theoretically possible single nucleotide variants (SNVs) that CADD scored to be most deleterious were analysed to understand which of those variants were observed in the population and what distinguishes observed variants from those that were only simulated.
+
+**Methods:** The gnomAD database was used to identify observed SNVs from the CADD-scored data. Literature research was performed for the SNVs with the highest allele frequency, and gene enrichment analysis was used for functional analysis of observed and only simulated variants. Furthermore, a comparison of the relative position of observed and simulated SNVs on their genes was made.
+
+**Results:** Approximately 10% of SNVs that CADD predicts to be highly deleterious were observed in gnomAD. This included a few common variants which due to different mechanisms were misclassified as deleterious by CADD. Observed variants appear to be less strongly associated with basic cellular processes and lethal phenotypes than only simulated SNVs.
+
+**Conclusion:** Most SNVs that CADD predicts to be highly deleterious appear not or only rarely in the population, but several observed cases where CADD overestimated the deleteriousness highlight that additional measures to directly estimate pathogenicity could improve the assessment of unknown variants.
+
 # Introduction
 
 Since the introduction of Sanger sequencing, almost 50 years ago, the field of DNA sequencing has made enormous technical advances. Massive parallel DNA sequencing techniques such as the Illumina plattforms can sequence a human genome within a few days, and more recent methods for long-read sequencing such as PacBio or Oxford Nanopore sequencing allow easier *de novo* assembly while increasing availability and portability of sequencing techniques [@shendure2017]. The relative technical ease of sequencing humane genomes stands opposed to the continuous challenge of interpreting genetic variation. Analyses of the 1000 Genomes Project revealed that an individual has - depending on their ancestry - between 4.1 and 5 million variants compared to the reference genome [@auton2015]. Most of these variants are Single Nucleotide Variants (SNVs) or short insertions and deletions (indels) located in the non-coding genome, and up to 200,000 Variants per individual have allele frequencies below 0.5% [@auton2015]. All of this illustrates that accurately distinguishing neutral (or even beneficial) variants from malignant variants that cause or increase risks for diseases is not a trivial task, still limiting the clinical utility of whole genome sequencing technologies [@lappalainen2021; @shendure2017]. Several methods to approach the challenge of predicting the effects of genetic variants have been developed. However, the use of such tools is often constrained by their limited scope on for example the coding genome [@brandes2023; @cheng2023], splice sites [@jaganathan2019], or specific regulatory sites [@sample2019]. An alternative approach to the problem of estimating the effect of genetic variants is the Combined Annotation-Dependent Depletion (CADD) Framework, introduced by @kircher2014 . Instead of trying to predict direct molecular effects of genetic variants, CADD tries to infer deleteriousness, an evolutionary measure of reduced fitness of a variant, as an indicator for pathogenicity. The method is based on the assumption, that alleles that can be observed at very high frequencies (\>95%) in humans or are fixed derived since human-chimpanzee ancestral genome (i.e. are shared among all present-day humans but changed in a human ancestor) are neutral or benign while simulated variants contain a significant number of deleterious variants that would typically be removed by generations of purifying selection. At the core of the CADD framework is a linear regression model, that was trained to use a large set of more than 100 annotations to distinguish the observed (proxy-neutral) from the simulated (proxy-deleterious) variants [@kircher2014]. Based on the annotations, the model computes a score (raw CADD score) that indicates how likely a variant belongs to the proxy-neutral or the proxy-deleterious class. After training, the model is applied to compute raw CADD scores for all theoretically possible SNVs in the human genome. To improve comparability of the results, the raw CADD score is then been scaled onto a Phred (-10 log~10~) scale from 0 to 99 where a score of 10 indicates a variant being amongst the top 10% with the highest predicted deleteriousness, while a score of 20 indicates the top 1% etc. [@kircher2014; @rentzsch2019]. Since its introduction, CADD has frequently been updated to incorporate the updated reference genome (GRCh38) and to improve its predictive performance [@rentzsch2019; @rentzsch2021; @schubach2024]. The model has been used in various research projects and has been found to be especially useful in prioritizing variants of unknown significance [@bongaerts2022; @tollefson2023].
@@ -71,7 +81,7 @@ n_observed <- nrow(overlap_phred40)
 
 A total of `r format(n_phred40, big.mark = ",")` variants on the autosomes had a CADD Phred score of at least 40. Of those variants, `r format(n_observed, big.mark = ","` (`r sprintf("%0.1f%%", n_observed/n_phred40 * 100)`) were found in the gnomAD database.
 
-Almost all variants, `r``format(``nrow(filter(overlap_phred40, Consequence == "STOP_GAINED")), big.mark = ",")` were stop-gains, while only `r nrow(filter(overlap_phred40, Consequence == "NON_SYNONYMOUS"))` non-synonymous, `r nrow(filter(overlap_phred40, Consequence == "INTRONIC"))` intronic, five splice site variants, two regulatory, and one variant in the 3' UTR (untranslated region of mature RNA after protein coding sequence) were identified. The majority of the observed SNVs (`r sprintf("%0.1f%%", nrow(filter(overlap_phred40, AC == 1))/n_observed * 100)`) are singletons . Only `r format(nrow(filter(overlap_phred40, AF >= 0.01)), big.mark = ",")` variants had an allele frequency (AF) of at least 1% (i.e. are not considered rare variants). Interestingly, three variants with an AF greater than 50% were found in the observed data. Table 1 shows an overview of the identified SNVs with the highest allele frequencies.
+Almost all variants, ``` r``format(``nrow(filter(overlap_phred40, Consequence == "STOP_GAINED")), big.mark = ",") ``` were stop-gains, while only `r nrow(filter(overlap_phred40, Consequence == "NON_SYNONYMOUS"))` non-synonymous, `r nrow(filter(overlap_phred40, Consequence == "INTRONIC"))` intronic, five splice site variants, two regulatory, and one variant in the 3' UTR (untranslated region of mature RNA after protein coding sequence) were identified. The majority of the observed SNVs (`r sprintf("%0.1f%%", nrow(filter(overlap_phred40, AC == 1))/n_observed * 100)`) are singletons . Only `r format(nrow(filter(overlap_phred40, AF >= 0.01)), big.mark = ",")` variants had an allele frequency (AF) of at least 1% (i.e. are not considered rare variants). Interestingly, three variants with an AF greater than 50% were found in the observed data. Table 1 shows an overview of the identified SNVs with the highest allele frequencies.
 
 ::: {#tbl-one}
 ```{r}
@@ -174,34 +184,6 @@ To see where deleterious SNVs are located on the individual genes, the relative 
 :::
 
 Figure 3a shows that stop gains with a lower Phred score tend to have a lower relative cDNA position, meaning they are located closer to the start of a gene. In figure 3b it can be seen that the distribution of the observed variants roughly follows the distribution of the simulated ones. However, while the simulated variants appear to be normally distributed around their mean of `r round(mean_relPos_sim, 2)` while the observed variants have a slightly lower mean (`r round(mean_relPos_obs, 2)`) and a distribution with a small plateau around 0.25.
-
----
-title: "Discussion"
-author: "Jonathan Speh"
-format:
-  docx:
-    toc: false
-    reference-doc: report_ref.docx
-  html: 
-    toc: false
-  pdf: 
-    toc: false
-    pdf-engine: pdflatex
-engine: knitr
-execute: 
-  cache: true
-  echo: false
-  output: true
-bibliography: references.bib
----
-
-```{r}
-#| label: setup
-
-library(knitr)
-library(flextable)
-options(scipen = 10000)
-```
 
 # Discussion
 
